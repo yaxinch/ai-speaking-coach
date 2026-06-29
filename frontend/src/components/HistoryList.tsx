@@ -1,5 +1,5 @@
-import { Box, ButtonBase, Stack, Typography } from "@mui/material";
-import type { PracticeSummary } from "../types/practice";
+import { Box, ButtonBase, Chip, Stack, Typography } from "@mui/material";
+import type { HistoryEntry, PracticeMode } from "../types/practice";
 
 const partLabel = {
   part1: "Part 1",
@@ -11,8 +11,8 @@ export function HistoryList({
   records,
   onOpen
 }: {
-  records: PracticeSummary[];
-  onOpen: (practiceId: string) => void;
+  records: HistoryEntry[];
+  onOpen: (mode: PracticeMode, practiceId: string) => void;
 }) {
   if (!records.length) {
     return <Typography color="text.secondary">No practice records yet.</Typography>;
@@ -23,7 +23,7 @@ export function HistoryList({
       {records.map((record) => (
         <ButtonBase
           key={record.id}
-          onClick={() => onOpen(record.id)}
+          onClick={() => onOpen(record.mode, record.id)}
           sx={{
             width: "100%",
             display: "block",
@@ -42,7 +42,7 @@ export function HistoryList({
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: { xs: "1fr", md: "210px 90px minmax(0, 1fr) 70px" },
+              gridTemplateColumns: { xs: "1fr", md: "190px 150px minmax(0, 1fr) 70px" },
               gap: 1.75,
               alignItems: "center"
             }}
@@ -50,8 +50,15 @@ export function HistoryList({
             <Typography color="text.secondary" sx={{ fontSize: 13 }}>
               {new Date(record.created_at).toLocaleString()}
             </Typography>
-            <Typography sx={{ fontWeight: 700 }}>{partLabel[record.part_type]}</Typography>
-            <Typography noWrap>{record.question_text}</Typography>
+            <Chip
+              label={record.mode === "full_mock" ? "Full Mock Test" : "Targeted Practice"}
+              color={record.mode === "full_mock" ? "primary" : "default"}
+              variant={record.mode === "full_mock" ? "filled" : "outlined"}
+              sx={{ justifySelf: "start" }}
+            />
+            <Typography noWrap sx={{ fontWeight: 700 }}>
+              {record.mode === "full_mock" ? "Part 1 · Part 2 · Part 3" : `${partLabel[record.part_type]} · ${record.question_text}`}
+            </Typography>
             <Typography
               color="primary.dark"
               sx={{ fontSize: 18, fontWeight: 800, textAlign: { xs: "left", md: "right" } }}

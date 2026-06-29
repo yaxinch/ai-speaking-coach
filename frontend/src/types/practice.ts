@@ -42,3 +42,62 @@ export interface FeedbackResult {
   improved_answer: string;
   action_suggestions: string[];
 }
+
+export type PracticeMode = "targeted" | "full_mock";
+
+export interface MockQuestion extends ExaminerQuestion {
+  question_index: number;
+}
+
+export interface MockAnswer {
+  part_type: PartType;
+  question_index: number;
+  question: MockQuestion;
+  answer_text: string;
+  audio_url: string | null;
+  transcript_text: string | null;
+}
+
+export interface QuestionAnalysis {
+  question_index: number;
+  band_estimate: number | null;
+  feedback: string;
+  strengths: string[];
+  weaknesses: string[];
+  improved_answer: string;
+}
+
+export interface PartFeedback {
+  band_estimate: number | null;
+  summary: string;
+  strengths: string[];
+  weaknesses: string[];
+  question_analyses: QuestionAnalysis[];
+}
+
+export interface MockTestReport {
+  overall_band_score: number | null;
+  key_strengths: string[];
+  key_weaknesses: string[];
+  action_plan: string[];
+  part1_feedback: PartFeedback;
+  part2_feedback: PartFeedback;
+  part3_feedback: PartFeedback;
+}
+
+export interface MockTestSummary {
+  id: string;
+  mode: "full_mock";
+  overall_band: number | null;
+  created_at: string;
+}
+
+export interface MockTestDetail extends MockTestSummary {
+  questions: MockQuestion[];
+  answers: MockAnswer[];
+  report: MockTestReport;
+}
+
+export type HistoryEntry =
+  | (PracticeSummary & { mode: "targeted" })
+  | MockTestSummary;

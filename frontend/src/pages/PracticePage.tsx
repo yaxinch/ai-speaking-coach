@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ArrowBackOutlinedIcon from "@mui/icons-material/ArrowBackOutlined";
 import RefreshOutlinedIcon from "@mui/icons-material/RefreshOutlined";
 import SendOutlinedIcon from "@mui/icons-material/SendOutlined";
 import { Button, Stack, Typography } from "@mui/material";
@@ -7,7 +8,6 @@ import { evaluateAnswer } from "../api/feedback";
 import { AnswerInput } from "../components/AnswerInput";
 import { ErrorState } from "../components/ErrorState";
 import { LoadingState } from "../components/LoadingState";
-import { PartSelector } from "../components/PartSelector";
 import { QuestionCard } from "../components/QuestionCard";
 import type { ExaminerQuestion, FeedbackResult, PartType } from "../types/practice";
 
@@ -19,11 +19,11 @@ const descriptions: Record<PartType, string> = {
 
 export function PracticePage({
   partType,
-  onChangePart,
+  onBack,
   onResult
 }: {
   partType: PartType;
-  onChangePart: (partType: PartType) => void;
+  onBack: () => void;
   onResult: (result: {
     practiceId: string;
     partType: PartType;
@@ -84,7 +84,15 @@ export function PracticePage({
 
   return (
     <Stack spacing={2.75} sx={{ maxWidth: 1120 }}>
-      <PartSelector selected={partType} onSelect={onChangePart} />
+      <Button
+        variant="outlined"
+        startIcon={<ArrowBackOutlinedIcon />}
+        onClick={onBack}
+        disabled={submitting}
+        sx={{ alignSelf: "flex-start" }}
+      >
+        Back to Part Selection
+      </Button>
       <Stack
         direction={{ xs: "column", md: "row" }}
         spacing={2}

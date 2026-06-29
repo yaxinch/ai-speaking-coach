@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
+import AssignmentTurnedInOutlinedIcon from "@mui/icons-material/AssignmentTurnedInOutlined";
 import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import LightModeOutlinedIcon from "@mui/icons-material/LightModeOutlined";
@@ -19,18 +20,24 @@ import {
   Popover,
   Stack,
   Tooltip,
-  Typography
+  Typography,
+  type Theme
 } from "@mui/material";
 import { HomePage } from "./pages/HomePage";
 import { PracticePage } from "./pages/PracticePage";
 import { ResultPage } from "./pages/ResultPage";
 import { HistoryPage } from "./pages/HistoryPage";
 import { PracticeDetailPage } from "./pages/PracticeDetailPage";
+import { TargetedPracticePage } from "./pages/TargetedPracticePage";
+import { FullMockTestPage } from "./pages/FullMockTestPage";
+import { FullMockResultPage } from "./pages/FullMockResultPage";
+import { FullMockDetailPage } from "./pages/FullMockDetailPage";
 import type { ColorMode } from "./theme";
-import type { ExaminerQuestion, FeedbackResult, PartType } from "./types/practice";
+import type { ExaminerQuestion, FeedbackResult, MockAnswer, MockTestReport, PartType } from "./types/practice";
 
 type Route =
   | { name: "home" }
+  | { name: "targeted" }
   | { name: "practice"; partType: PartType }
   | {
       name: "result";
@@ -41,7 +48,10 @@ type Route =
       feedback: FeedbackResult;
     }
   | { name: "history" }
-  | { name: "detail"; practiceId: string };
+  | { name: "detail"; practiceId: string }
+  | { name: "full-mock" }
+  | { name: "full-mock-result"; mockTestId: string; answers: MockAnswer[]; report: MockTestReport }
+  | { name: "full-mock-detail"; mockTestId: string };
 
 const partLabels: Record<PartType, string> = {
   part1: "Part 1",
@@ -72,9 +82,12 @@ export function App({
 
   const routeLabel = useMemo(() => {
     if (route.name === "practice") return `Practice ${partLabels[route.partType]}`;
+    if (route.name === "targeted") return "Targeted Part Practice";
+    if (route.name === "full-mock") return "Full Speaking Mock Test";
+    if (route.name === "full-mock-result" || route.name === "full-mock-detail") return "Full Mock Test Report";
     if (route.name === "result") return "Feedback Result";
     if (route.name === "history") return "Practice History";
-    if (route.name === "detail") return "Practice Detail";
+    if (route.name === "detail") return "Targeted Practice Report";
     return "Practice Dashboard";
   }, [route]);
 
@@ -86,15 +99,21 @@ export function App({
       onClick: () => setRoute({ name: "home" } as Route)
     },
     {
-      label: "Practice",
+      label: "Full Mock Test",
+      icon: AssignmentTurnedInOutlinedIcon,
+      active: route.name === "full-mock" || route.name === "full-mock-result",
+      onClick: () => setRoute({ name: "full-mock" } as Route)
+    },
+    {
+      label: "Targeted Practice",
       icon: MenuBookOutlinedIcon,
-      active: route.name === "practice",
-      onClick: () => setRoute({ name: "practice", partType: "part1" } as Route)
+      active: route.name === "targeted" || route.name === "practice" || route.name === "result",
+      onClick: () => setRoute({ name: "targeted" } as Route)
     },
     {
       label: "History",
       icon: HistoryOutlinedIcon,
-      active: route.name === "history" || route.name === "detail",
+      active: route.name === "history" || route.name === "detail" || route.name === "full-mock-detail",
       onClick: () => setRoute({ name: "history" } as Route)
     }
   ];
@@ -103,7 +122,7 @@ export function App({
   const selectedMode = colorModeOptions.find((option) => option.value === colorMode) ?? colorModeOptions[2];
   const SelectedModeIcon = selectedMode.icon;
 
-  const sidebarButtonSx = {
+  const sidebarButtonSx = (theme: Theme) => ({
     borderRadius: 1.5,
     minHeight: 44,
     width: "100%",
@@ -117,10 +136,10 @@ export function App({
       color: "#ffffff"
     },
     "&.Mui-selected, &.Mui-selected:hover": {
-      bgcolor: "#ffffff",
-      color: "#00AEEF"
+      bgcolor: theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.16)" : "#ffffff",
+      color: theme.palette.mode === "dark" ? "#ffffff" : "#00AEEF"
     }
-  } as const;
+  } as const);
 
   return (
     <Box
@@ -217,7 +236,7 @@ export function App({
                 <ListItemButton selected={item.active} onClick={item.onClick} sx={sidebarButtonSx}>
                   <ListItemIcon
                     sx={{
-                      color: item.active ? "#00AEEF" : "#ffffff",
+                      color: (theme) => (item.active && theme.palette.mode !== "dark" ? "#00AEEF" : "#ffffff"),
                       minWidth: sidebarCollapsed ? 0 : 34,
                       justifyContent: "center"
                     }}
@@ -291,11 +310,18 @@ export function App({
             </Typography>
           </Box>
 
-          {route.name === "home" && <HomePage onStart={(partType) => setRoute({ name: "practice", partType })} />}
+          {route.name === "home" && (
+            <HomePage
+              onSelectMode={(mode) => setRoute(mode === "full_mock" ? { name: "full-mock" } : { name: "targeted" })}
+            />
+          )}
+          {route.name === "targeted" && (
+            <TargetedPracticePage onSelect={(partType) => setRoute({ name: "practice", partType })} />
+          )}
           {route.name === "practice" && (
             <PracticePage
               partType={route.partType}
-              onChangePart={(partType) => setRoute({ name: "practice", partType })}
+              onBack={() => setRoute({ name: "targeted" })}
               onResult={(result) => setRoute({ name: "result", ...result })}
             />
           )}
@@ -308,9 +334,29 @@ export function App({
               onHistory={() => setRoute({ name: "history" })}
             />
           )}
-          {route.name === "history" && <HistoryPage onOpen={(practiceId) => setRoute({ name: "detail", practiceId })} />}
+          {route.name === "full-mock" && (
+            <FullMockTestPage onResult={(result) => setRoute({ name: "full-mock-result", ...result })} />
+          )}
+          {route.name === "full-mock-result" && (
+            <FullMockResultPage
+              report={route.report}
+              answers={route.answers}
+              onNewTest={() => setRoute({ name: "full-mock" })}
+              onHistory={() => setRoute({ name: "history" })}
+            />
+          )}
+          {route.name === "history" && (
+            <HistoryPage
+              onOpen={(mode, practiceId) =>
+                setRoute(mode === "full_mock" ? { name: "full-mock-detail", mockTestId: practiceId } : { name: "detail", practiceId })
+              }
+            />
+          )}
           {route.name === "detail" && (
             <PracticeDetailPage practiceId={route.practiceId} onBack={() => setRoute({ name: "history" })} />
+          )}
+          {route.name === "full-mock-detail" && (
+            <FullMockDetailPage mockTestId={route.mockTestId} onBack={() => setRoute({ name: "history" })} />
           )}
         </Box>
       </Box>

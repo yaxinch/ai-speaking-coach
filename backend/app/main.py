@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import examiner, feedback, practices
+from app.api.routes import examiner, feedback, mock_tests, practices
 from app.config import get_settings
 from app.database import init_db
 
@@ -32,3 +32,4 @@ def health() -> dict[str, str]:
 app.include_router(examiner.router, prefix="/api/examiner", tags=["examiner"])
 app.include_router(feedback.router, prefix="/api/feedback", tags=["feedback"])
 app.include_router(practices.router, prefix="/api/practices", tags=["practices"])
+app.include_router(mock_tests.router, prefix="/api/mock-tests", tags=["mock-tests"])

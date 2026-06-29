@@ -37,7 +37,8 @@ def get_db():
 
 
 def init_db() -> None:
+    from app.models.mock_test import MockTestRecord
     from app.models.practice import PracticeRecord
 
-    _ = PracticeRecord
+    _ = (PracticeRecord, MockTestRecord)
     Base.metadata.create_all(bind=engine)

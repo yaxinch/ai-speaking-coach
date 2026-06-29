@@ -1,20 +1,28 @@
 import { useEffect, useState } from "react";
 import { Stack } from "@mui/material";
 import { listPractices } from "../api/practices";
+import { listMockTests } from "../api/mockTests";
 import { ErrorState } from "../components/ErrorState";
 import { HistoryList } from "../components/HistoryList";
 import { SectionHeader } from "../components/Layout";
 import { LoadingState } from "../components/LoadingState";
-import type { PracticeSummary } from "../types/practice";
+import type { HistoryEntry, PracticeMode } from "../types/practice";
 
-export function HistoryPage({ onOpen }: { onOpen: (practiceId: string) => void }) {
-  const [records, setRecords] = useState<PracticeSummary[]>([]);
+export function HistoryPage({ onOpen }: { onOpen: (mode: PracticeMode, practiceId: string) => void }) {
+  const [records, setRecords] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    listPractices()
-      .then(setRecords)
+    Promise.all([listPractices(), listMockTests()])
+      .then(([targeted, mockTests]) => {
+        const combined: HistoryEntry[] = [
+          ...targeted.map((record) => ({ ...record, mode: "targeted" as const })),
+          ...mockTests
+        ];
+        combined.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        setRecords(combined);
+      })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load history."))
       .finally(() => setLoading(false));
   }, []);

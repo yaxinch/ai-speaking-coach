@@ -102,7 +102,7 @@ export function createAppTheme(mode: PaletteMode) {
         styleOverrides: {
           root: {
             "&.Mui-selected": {
-              backgroundColor: alpha("#00AEEF", 0.2)
+              backgroundColor: isDark ? alpha("#ffffff", 0.16) : alpha("#00AEEF", 0.2)
             }
           }
         }

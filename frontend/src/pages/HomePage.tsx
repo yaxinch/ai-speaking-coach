@@ -1,9 +1,9 @@
 import { Stack, Typography } from "@mui/material";
-import { PartSelector } from "../components/PartSelector";
+import { PracticeModeSelector } from "../components/PracticeModeSelector";
 import { Panel, SectionHeader } from "../components/Layout";
-import type { PartType } from "../types/practice";
+import type { PracticeMode } from "../types/practice";
 
-export function HomePage({ onStart }: { onStart: (partType: PartType) => void }) {
+export function HomePage({ onSelectMode }: { onSelectMode: (mode: PracticeMode) => void }) {
   return (
     <Stack spacing={2.75} sx={{ maxWidth: 1120 }}>
       <Panel
@@ -19,17 +19,17 @@ export function HomePage({ onStart }: { onStart: (partType: PartType) => void })
       >
         <Stack spacing={1.25} sx={{ maxWidth: 820 }}>
           <Typography variant="h1" component="h2" sx={{ fontSize: { xs: 28, md: 34 } }}>
-            Practice IELTS Speaking with examiner-style questions and structured AI feedback.
+            Choose how you want to prepare for IELTS Speaking.
           </Typography>
           <Typography color="text.secondary">
-            Select a speaking part, generate a prompt, submit a text answer, and review IELTS-style scoring with
-            improvement suggestions.
+            Take a complete three-part mock test or focus on one speaking part with examiner-style questions and
+            structured AI feedback.
           </Typography>
         </Stack>
       </Panel>
 
-      <SectionHeader title="Choose Practice Mode" description="Start with the IELTS part you want to improve today." />
-      <PartSelector onSelect={onStart} />
+      <SectionHeader title="Choose Practice Mode" description="Select a complete simulation or focused practice." />
+      <PracticeModeSelector onSelect={onSelectMode} />
     </Stack>
   );
 }
