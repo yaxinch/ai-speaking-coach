@@ -4,7 +4,8 @@ from sqlalchemy.orm import Session
 from app.agents.mock_test_agent import MockTestAgent
 from app.agents.mock_test_workflow import MockTestWorkflow
 from app.database import get_db
-from app.llm.deepseek_provider import DeepSeekProvider
+from app.llm.base import LLMProvider
+from app.providers.factory import get_llm_provider
 from app.schemas.mock_test import (
     EvaluateMockTestRequest,
     EvaluateMockTestResponse,
@@ -18,16 +19,17 @@ router = APIRouter()
 
 
 @router.post("/generate", response_model=GenerateMockTestResponse)
-async def generate_mock_test() -> GenerateMockTestResponse:
-    return await MockTestAgent(DeepSeekProvider()).generate()
+async def generate_mock_test(llm: LLMProvider = Depends(get_llm_provider)) -> GenerateMockTestResponse:
+    return await MockTestAgent(llm).generate()
 
 
 @router.post("/evaluate", response_model=EvaluateMockTestResponse)
 async def evaluate_mock_test(
     request: EvaluateMockTestRequest,
     db: Session = Depends(get_db),
+    llm: LLMProvider = Depends(get_llm_provider),
 ) -> EvaluateMockTestResponse:
-    return await MockTestWorkflow(DeepSeekProvider(), db).evaluate_and_save(request)
+    return await MockTestWorkflow(llm, db).evaluate_and_save(request)
 
 
 @router.get("", response_model=list[MockTestSummary])

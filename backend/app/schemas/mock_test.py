@@ -3,6 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field, model_validator
 
 from app.schemas.agent import CueCard, PartType
+from app.schemas.speaking import VoiceFeedback, VoiceScore
 
 
 EXPECTED_PART_COUNTS: dict[PartType, int] = {"part1": 4, "part2": 1, "part3": 3}
@@ -42,7 +43,10 @@ class MockAnswer(BaseModel):
     question: MockQuestion
     answer_text: str = Field(min_length=1)
     audio_url: str | None = None
+    audio_asset_id: str | None = None
     transcript_text: str | None = None
+    voice_score: VoiceScore | None = None
+    voice_feedback: VoiceFeedback | None = None
 
 
 class QuestionAnalysis(BaseModel):

@@ -46,6 +46,8 @@ type Route =
       question: ExaminerQuestion;
       userAnswer: string;
       feedback: FeedbackResult;
+      audioUrl?: string;
+      isMockTranscript?: boolean;
     }
   | { name: "history" }
   | { name: "detail"; practiceId: string }
@@ -330,6 +332,8 @@ export function App({
               question={route.question}
               userAnswer={route.userAnswer}
               feedback={route.feedback}
+              audioUrl={route.audioUrl}
+              isMockTranscript={route.isMockTranscript}
               onNewPractice={() => setRoute({ name: "practice", partType: route.partType })}
               onHistory={() => setRoute({ name: "history" })}
             />

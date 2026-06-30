@@ -24,9 +24,31 @@ function ListBlock({ title, items }: { title: string; items: string[] }) {
 }
 
 export function FeedbackPanel({ feedback, plain = false }: { feedback: FeedbackResult; plain?: boolean }) {
+  const extra = (
+    <>
+      {feedback.summary ? (
+        <Box sx={{ py: 3, borderTop: 1, borderColor: "divider" }}>
+          <Typography variant="h3" sx={{ mb: 1.5 }}>Feedback Summary</Typography>
+          <Typography sx={{ lineHeight: 1.65 }}>{feedback.summary}</Typography>
+        </Box>
+      ) : null}
+      {feedback.corrections?.length ? (
+        <Box sx={{ py: 3, borderTop: 1, borderColor: "divider" }}>
+          <Typography variant="h3" sx={{ mb: 1.5 }}>Corrections</Typography>
+          {feedback.corrections.map((item, index) => (
+            <Box key={`${item.original}-${index}`} sx={{ py: 1 }}>
+              <Typography><s>{item.original}</s> → <strong>{item.corrected}</strong></Typography>
+              <Typography color="text.secondary" sx={{ mt: 0.5 }}>{item.reason}</Typography>
+            </Box>
+          ))}
+        </Box>
+      ) : null}
+    </>
+  );
   if (plain) {
     return (
       <Box>
+        {extra}
         <Box
           sx={{
             display: "grid",
@@ -77,6 +99,7 @@ export function FeedbackPanel({ feedback, plain = false }: { feedback: FeedbackR
 
   return (
     <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" }, gap: 2 }}>
+      {(feedback.summary || feedback.corrections?.length) ? <Panel sx={{ gridColumn: { xs: "auto", md: "1 / -1" } }}>{extra}</Panel> : null}
       <Panel>
         <ListBlock title="Strengths" items={feedback.strengths} />
       </Panel>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Box, List, ListItem, ListItemText, Stack, Tab, Tabs, Typography } from "@mui/material";
 import type { MockAnswer, MockTestReport, PartFeedback, PartType } from "../types/practice";
 import { QuestionCard } from "./QuestionCard";
+import { PronunciationAssessmentView } from "./PronunciationAssessmentView";
 
 const partTabs: Array<{ value: PartType; label: string }> = [
   { value: "part1", label: "Part 1" },
@@ -131,6 +132,33 @@ function PartReport({ partType, feedback, answers }: { partType: PartType; feedb
               </Typography>
               <Typography sx={{ mt: 1.25, whiteSpace: "pre-wrap", lineHeight: 1.65 }}>{answer.answer_text}</Typography>
             </Box>
+            {answer.audio_url ? (
+              <Box sx={{ py: 3, borderTop: 1, borderColor: "divider" }}>
+                <Typography variant="h3" sx={{ mb: 1.5 }}>Recording</Typography>
+                <audio src={answer.audio_url} controls style={{ width: "100%" }} />
+              </Box>
+            ) : null}
+            {answer.voice_score ? (
+              <Box sx={{ py: 3, borderTop: 1, borderColor: "divider" }}>
+                <Typography variant="h3" sx={{ mb: 1.5 }}>Criteria Scores</Typography>
+                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2, 1fr)", md: "repeat(5, 1fr)" }, gap: 1.5 }}>
+                  {[
+                    ["Overall", answer.voice_score.overall],
+                    ["Fluency", answer.voice_score.fluency_coherence],
+                    ["Vocabulary", answer.voice_score.lexical_resource],
+                    ["Grammar", answer.voice_score.grammatical_range_accuracy],
+                    ["Pronunciation (estimated)", answer.voice_score.pronunciation]
+                  ].map(([label, value]) => (
+                    <Box key={String(label)} sx={{ p: 1.5, bgcolor: "action.hover", borderRadius: 1.5 }}>
+                      <Typography color="text.secondary" sx={{ fontSize: 12 }}>{label}</Typography>
+                      <Typography sx={{ mt: 0.5, fontSize: 22, fontWeight: 800 }}>{typeof value === "number" ? value.toFixed(1) : "N/A"}</Typography>
+                    </Box>
+                  ))}
+                </Box>
+                <PronunciationAssessmentView assessment={answer.voice_score.pronunciation_assessment} />
+                {answer.voice_feedback?.summary ? <Typography sx={{ mt: 2, lineHeight: 1.65 }}>{answer.voice_feedback.summary}</Typography> : null}
+              </Box>
+            ) : null}
             {analysis ? (
               <Box sx={{ borderTop: 1, borderColor: "divider" }}>
                 <Box sx={{ py: 3 }}>
@@ -167,6 +195,12 @@ export function MockTestReportView({ report, answers }: { report: MockTestReport
     part2: report.part2_feedback,
     part3: report.part3_feedback
   };
+  const azureScores = answers
+    .map((answer) => answer.voice_score?.pronunciation_assessment?.pron_score)
+    .filter((value): value is number => typeof value === "number");
+  const averageAzureScore = azureScores.length
+    ? azureScores.reduce((sum, value) => sum + value, 0) / azureScores.length
+    : null;
 
   return (
     <Stack spacing={2.5}>
@@ -179,6 +213,11 @@ export function MockTestReportView({ report, answers }: { report: MockTestReport
         <Box sx={{ borderTop: 1, borderBottom: 1, borderColor: "divider" }}>
           <Box sx={{ py: 3 }}>
             <BandBlock label="Overall band estimate" value={report.overall_band_score} />
+            {averageAzureScore !== null ? (
+              <Typography sx={{ mt: 2, fontWeight: 700 }}>
+                Average Azure pronunciation score: {averageAzureScore.toFixed(1)}/100
+              </Typography>
+            ) : null}
           </Box>
           <Box sx={{ borderTop: 1, borderColor: "divider" }}>
             <SplitLists

@@ -1,10 +1,7 @@
 import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import ReplayOutlinedIcon from "@mui/icons-material/ReplayOutlined";
-import { Button, Stack, Typography } from "@mui/material";
-import { FeedbackPanel } from "../components/FeedbackPanel";
-import { Panel } from "../components/Layout";
-import { QuestionCard } from "../components/QuestionCard";
-import { ScoreSummary } from "../components/ScoreSummary";
+import { Button, Stack } from "@mui/material";
+import { TargetedPracticeReportView } from "../components/TargetedPracticeReportView";
 import type { ExaminerQuestion, FeedbackResult } from "../types/practice";
 
 export function ResultPage({
@@ -12,25 +9,27 @@ export function ResultPage({
   userAnswer,
   feedback,
   onNewPractice,
-  onHistory
+  onHistory,
+  audioUrl,
+  isMockTranscript
 }: {
   question: ExaminerQuestion;
   userAnswer: string;
   feedback: FeedbackResult;
   onNewPractice: () => void;
   onHistory: () => void;
+  audioUrl?: string;
+  isMockTranscript?: boolean;
 }) {
   return (
     <Stack spacing={2.75} sx={{ maxWidth: 1120 }}>
-      <QuestionCard question={question} />
-      <Panel>
-        <Typography color="secondary.main" sx={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase" }}>
-          Your Answer
-        </Typography>
-        <Typography sx={{ mt: 1.25, whiteSpace: "pre-wrap", lineHeight: 1.65 }}>{userAnswer}</Typography>
-      </Panel>
-      <ScoreSummary feedback={feedback} />
-      <FeedbackPanel feedback={feedback} />
+      <TargetedPracticeReportView
+        question={question}
+        userAnswer={userAnswer}
+        feedback={feedback}
+        audioUrl={audioUrl}
+        isMockTranscript={isMockTranscript}
+      />
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
         <Button variant="contained" startIcon={<ReplayOutlinedIcon />} onClick={onNewPractice}>
           New Practice

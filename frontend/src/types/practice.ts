@@ -29,6 +29,35 @@ export interface PracticeDetail {
   feedback: FeedbackResult;
   overall_band: number | null;
   created_at: string;
+  answer_source?: "text" | "voice";
+  transcript_text?: string | null;
+  audio_asset_id?: string | null;
+  audio_url?: string | null;
+}
+
+export interface Correction {
+  original: string;
+  corrected: string;
+  reason: string;
+}
+
+export interface WeakPronunciationWord {
+  word: string;
+  accuracy_score: number;
+  error_type: string | null;
+}
+
+export interface PronunciationAssessment {
+  available: boolean;
+  provider: string;
+  is_mock: boolean;
+  pron_score: number | null;
+  estimated_ielts_band: number | null;
+  accuracy_score: number | null;
+  fluency_score: number | null;
+  prosody_score: number | null;
+  weak_words: WeakPronunciationWord[];
+  message: string;
 }
 
 export interface FeedbackResult {
@@ -36,11 +65,54 @@ export interface FeedbackResult {
   fluency_score: number | null;
   vocabulary_score: number | null;
   grammar_score: number | null;
+  pronunciation_score?: number | null;
   pronunciation_note: string;
+  pronunciation_assessment?: PronunciationAssessment | null;
+  summary?: string;
   strengths: string[];
   weaknesses: string[];
+  corrections?: Correction[];
   improved_answer: string;
   action_suggestions: string[];
+  next_practice_suggestion?: string;
+}
+
+export interface VoiceScore {
+  overall: number | null;
+  fluency_coherence: number | null;
+  lexical_resource: number | null;
+  grammatical_range_accuracy: number | null;
+  pronunciation: number | null;
+  pronunciation_assessment?: PronunciationAssessment | null;
+}
+
+export interface VoiceFeedback {
+  summary: string;
+  strengths: string[];
+  weaknesses: string[];
+  corrections: Correction[];
+  improved_answer: string;
+  next_practice_suggestion: string;
+  pronunciation_note: string;
+}
+
+export interface VoiceAnswerResult {
+  practice_id: string | null;
+  audio_asset_id: string;
+  audio_url: string;
+  transcript: string;
+  asr_provider: string;
+  is_mock_transcript: boolean;
+  score: VoiceScore;
+  feedback: VoiceFeedback;
+}
+
+export interface VoiceAnswerValue {
+  audioBlob?: Blob;
+  audioUrl?: string;
+  duration?: number;
+  mimeType?: string;
+  recordedAt?: string;
 }
 
 export type PracticeMode = "targeted" | "full_mock";
@@ -55,7 +127,10 @@ export interface MockAnswer {
   question: MockQuestion;
   answer_text: string;
   audio_url: string | null;
+  audio_asset_id?: string | null;
   transcript_text: string | null;
+  voice_score?: VoiceScore | null;
+  voice_feedback?: VoiceFeedback | null;
 }
 
 export interface QuestionAnalysis {

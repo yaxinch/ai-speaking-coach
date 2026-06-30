@@ -37,8 +37,9 @@ def get_db():
 
 
 def init_db() -> None:
+    from app.models.audio_asset import AudioAsset
     from app.models.mock_test import MockTestRecord
     from app.models.practice import PracticeRecord
 
-    _ = (PracticeRecord, MockTestRecord)
+    _ = (PracticeRecord, MockTestRecord, AudioAsset)
     Base.metadata.create_all(bind=engine)

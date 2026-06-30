@@ -22,3 +22,7 @@ class PracticeDetail(BaseModel):
     feedback: FeedbackResult
     overall_band: float | None
     created_at: datetime
+    answer_source: str = "text"
+    transcript_text: str | None = None
+    audio_asset_id: str | None = None
+    audio_url: str | None = None

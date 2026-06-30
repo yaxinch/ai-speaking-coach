@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
 import ArrowBackOutlinedIcon from "@mui/icons-material/ArrowBackOutlined";
-import { Box, Button, Stack, Typography } from "@mui/material";
+import { Button, Stack } from "@mui/material";
 import { getPractice } from "../api/practices";
 import { ErrorState } from "../components/ErrorState";
-import { FeedbackPanel } from "../components/FeedbackPanel";
 import { LoadingState } from "../components/LoadingState";
-import { QuestionCard } from "../components/QuestionCard";
-import { ScoreSummary } from "../components/ScoreSummary";
+import { TargetedPracticeReportView } from "../components/TargetedPracticeReportView";
 import type { PracticeDetail } from "../types/practice";
 
 export function PracticeDetailPage({ practiceId, onBack }: { practiceId: string; onBack: () => void }) {
@@ -30,19 +28,12 @@ export function PracticeDetailPage({ practiceId, onBack }: { practiceId: string;
       <Button variant="outlined" startIcon={<ArrowBackOutlinedIcon />} onClick={onBack} sx={{ alignSelf: "flex-start" }}>
         Back
       </Button>
-      <Box sx={{ borderTop: 1, borderBottom: 1, borderColor: "divider" }}>
-        <QuestionCard question={record.question} plain />
-        <Box sx={{ py: 3, borderTop: 1, borderColor: "divider" }}>
-          <Typography color="secondary.main" sx={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase" }}>
-            Your Answer
-          </Typography>
-          <Typography sx={{ mt: 1.25, whiteSpace: "pre-wrap", lineHeight: 1.65 }}>{record.user_answer}</Typography>
-        </Box>
-        <Box sx={{ borderTop: 1, borderColor: "divider" }}>
-          <ScoreSummary feedback={record.feedback} plain />
-        </Box>
-        <FeedbackPanel feedback={record.feedback} plain />
-      </Box>
+      <TargetedPracticeReportView
+        question={record.question}
+        userAnswer={record.user_answer}
+        feedback={record.feedback}
+        audioUrl={record.audio_url}
+      />
     </Stack>
   );
 }

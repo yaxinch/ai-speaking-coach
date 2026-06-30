@@ -18,12 +18,18 @@ class PracticeService:
         question: ExaminerQuestion,
         user_answer: str,
         feedback: FeedbackResult,
+        answer_source: str = "text",
+        transcript_text: str | None = None,
+        audio_asset_id: str | None = None,
     ) -> PracticeRecord:
         record = PracticeRecord(
             part_type=part_type,
             question_json=json.dumps(question.model_dump(), ensure_ascii=False),
             question_text=question.question,
             user_answer=user_answer,
+            answer_source=answer_source,
+            transcript_text=transcript_text,
+            audio_asset_id=audio_asset_id,
             feedback_json=json.dumps(feedback.model_dump(), ensure_ascii=False),
             overall_band=feedback.overall_band_score,
         )
@@ -56,6 +62,10 @@ class PracticeService:
             question_text=record.question_text,
             user_answer=record.user_answer,
             feedback=FeedbackResult.model_validate(json.loads(record.feedback_json)),
+            answer_source=record.answer_source,
+            transcript_text=record.transcript_text,
+            audio_asset_id=record.audio_asset_id,
+            audio_url=f"/api/speaking/audio/{record.audio_asset_id}" if record.audio_asset_id else None,
             overall_band=record.overall_band,
             created_at=record.created_at,
         )
