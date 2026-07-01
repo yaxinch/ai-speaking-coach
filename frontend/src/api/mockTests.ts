@@ -1,8 +1,15 @@
 import { apiRequest } from "./client";
-import type { MockAnswer, MockQuestion, MockTestDetail, MockTestReport, MockTestSummary } from "../types/practice";
+import type { MockAnswer, MockQuestion, MockSession, MockTestDetail, MockTestReport, MockTestSummary } from "../types/practice";
 
 export function generateMockTest(): Promise<{ questions: MockQuestion[] }> {
   return apiRequest("/api/mock-tests/generate", { method: "POST" });
+}
+
+export function startMockTest(practiceGoal: string): Promise<MockSession> {
+  return apiRequest("/api/mock-tests/start", {
+    method: "POST",
+    body: JSON.stringify({ practiceGoal })
+  });
 }
 
 export function evaluateMockTest(

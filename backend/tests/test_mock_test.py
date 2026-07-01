@@ -12,6 +12,7 @@ from app.schemas.mock_test import (
     MockAnswer,
     MockQuestion,
     MockTestReport,
+    validate_report_for_questions,
 )
 from app.services.mock_test_service import MockTestService
 
@@ -37,6 +38,14 @@ def questions() -> list[dict]:
         *[question("part1", index) for index in range(1, 5)],
         question("part2", 1),
         *[question("part3", index) for index in range(1, 4)],
+    ]
+
+
+def bank_questions() -> list[dict]:
+    return [
+        *[question("part1", index) for index in range(1, 7)],
+        question("part2", 1),
+        *[question("part3", index) for index in range(1, 5)],
     ]
 
 
@@ -83,6 +92,22 @@ class MockTestSchemaTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             GenerateMockTestResponse.model_validate({"questions": questions()[:-1]})
 
+    def test_accepts_question_bank_6_1_4_distribution(self):
+        parsed = EvaluateMockTestRequest.model_validate(
+            {
+                "answers": [
+                    {
+                        "part_type": item["part_type"],
+                        "question_index": item["question_index"],
+                        "question": item,
+                        "answer_text": "A complete answer.",
+                    }
+                    for item in bank_questions()
+                ]
+            }
+        )
+        self.assertEqual(len(parsed.answers), 11)
+
     def test_answer_transport_fields_are_nullable(self):
         payload = [
             {
@@ -101,8 +126,9 @@ class MockTestSchemaTests(unittest.TestCase):
     def test_report_requires_analysis_for_every_question(self):
         invalid = report().model_dump()
         invalid["part1_feedback"]["question_analyses"].pop()
+        parsed = MockTestReport.model_validate(invalid)
         with self.assertRaises(ValueError):
-            MockTestReport.model_validate(invalid)
+            validate_report_for_questions(parsed, [MockQuestion.model_validate(item) for item in questions()])
 
 
 class MockTestServiceTests(unittest.TestCase):

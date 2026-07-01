@@ -12,7 +12,10 @@ from app.schemas.mock_test import (
     GenerateMockTestResponse,
     MockTestDetail,
     MockTestSummary,
+    StartMockTestRequest,
+    StartMockTestResponse,
 )
+from app.services.mock_session_composer_service import MockSessionComposerService
 from app.services.mock_test_service import MockTestService
 
 router = APIRouter()
@@ -21,6 +24,15 @@ router = APIRouter()
 @router.post("/generate", response_model=GenerateMockTestResponse)
 async def generate_mock_test(llm: LLMProvider = Depends(get_llm_provider)) -> GenerateMockTestResponse:
     return await MockTestAgent(llm).generate()
+
+
+@router.post("/start", response_model=StartMockTestResponse, response_model_by_alias=True)
+async def start_mock_test(
+    request: StartMockTestRequest,
+    db: Session = Depends(get_db),
+    llm: LLMProvider = Depends(get_llm_provider),
+) -> StartMockTestResponse:
+    return await MockSessionComposerService(db, llm).start(request.practiceGoal)
 
 
 @router.post("/evaluate", response_model=EvaluateMockTestResponse)

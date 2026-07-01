@@ -33,12 +33,12 @@ import { FullMockTestPage } from "./pages/FullMockTestPage";
 import { FullMockResultPage } from "./pages/FullMockResultPage";
 import { FullMockDetailPage } from "./pages/FullMockDetailPage";
 import type { ColorMode } from "./theme";
-import type { ExaminerQuestion, FeedbackResult, MockAnswer, MockTestReport, PartType } from "./types/practice";
+import type { ExaminerQuestion, FeedbackResult, MockAnswer, MockTestReport, PartType, SectionPracticeStart } from "./types/practice";
 
 type Route =
   | { name: "home" }
   | { name: "targeted" }
-  | { name: "practice"; partType: PartType }
+  | { name: "practice"; partType: PartType; practiceGoal: string; selection?: SectionPracticeStart }
   | {
       name: "result";
       practiceId: string;
@@ -48,6 +48,7 @@ type Route =
       feedback: FeedbackResult;
       audioUrl?: string;
       isMockTranscript?: boolean;
+      practiceGoal: string;
     }
   | { name: "history" }
   | { name: "detail"; practiceId: string }
@@ -318,11 +319,17 @@ export function App({
             />
           )}
           {route.name === "targeted" && (
-            <TargetedPracticePage onSelect={(partType) => setRoute({ name: "practice", partType })} />
+            <TargetedPracticePage
+              onStart={(partType, practiceGoal, selection) =>
+                setRoute({ name: "practice", partType, practiceGoal, selection })
+              }
+            />
           )}
           {route.name === "practice" && (
             <PracticePage
               partType={route.partType}
+              practiceGoal={route.practiceGoal}
+              initialSelection={route.selection}
               onBack={() => setRoute({ name: "targeted" })}
               onResult={(result) => setRoute({ name: "result", ...result })}
             />
@@ -334,7 +341,7 @@ export function App({
               feedback={route.feedback}
               audioUrl={route.audioUrl}
               isMockTranscript={route.isMockTranscript}
-              onNewPractice={() => setRoute({ name: "practice", partType: route.partType })}
+              onNewPractice={() => setRoute({ name: "practice", partType: route.partType, practiceGoal: route.practiceGoal })}
               onHistory={() => setRoute({ name: "history" })}
             />
           )}

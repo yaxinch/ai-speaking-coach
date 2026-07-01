@@ -1,0 +1,60 @@
+[
+  {
+    "name": "British Council Take IELTS - Speaking Practice Test",
+    "base_url": "https://takeielts.britishcouncil.org",
+    "source_type": "official_sample",
+    "confidence": "high",
+    "parser": "british_council_speaking",
+    "enabled": false,
+    "urls": [
+      "https://takeielts.britishcouncil.org/take-ielts/prepare/free-ielts-english-practice-tests/speaking",
+      "https://takeielts.britishcouncil.org/take-ielts/prepare/free-ielts-english-practice-tests/speaking/part-1",
+      "https://takeielts.britishcouncil.org/take-ielts/prepare/free-ielts-english-practice-tests/speaking/part-2",
+      "https://takeielts.britishcouncil.org/take-ielts/prepare/free-ielts-english-practice-tests/speaking/part-3",
+      "https://takeielts.britishcouncil.org/take-ielts/prepare/free-ielts-english-practice-tests/speaking-2/part-1"
+    ],
+    "notes": "Official British Council Take IELTS public speaking practice pages. Enable only after robots.txt check and small dry-run."
+  },
+  {
+    "name": "IELTS.org Official Sample Questions",
+    "base_url": "https://ielts.org",
+    "source_type": "official_sample",
+    "confidence": "high",
+    "parser": "ielts_org_sample",
+    "enabled": false,
+    "urls": [
+      "https://ielts.org/take-a-test/preparation-resources/sample-test-questions",
+      "https://ielts.org/take-a-test/preparation-resources/sample-test-questions/academic-test",
+      "https://ielts.org/take-a-test/preparation-resources/sample-test-questions/general-training-test",
+      "https://ielts.org/cdn/ielts-sample-tests/ielts-speaking-sample-tasks-2023.pdf"
+    ],
+    "notes": "Official IELTS.org sample pages. PDF parsing is intentionally not implemented; use manual import after review."
+  },
+  {
+    "name": "IDP IELTS - Speaking Practice Questions",
+    "base_url": "https://ielts.idp.com",
+    "source_type": "official_sample",
+    "confidence": "high",
+    "parser": "idp_speaking",
+    "enabled": false,
+    "urls": [
+      "https://ielts.idp.com/prepare/article-free-speaking-practice-questions",
+      "https://ielts.idp.com/prepare/article-free-practice-tests"
+    ],
+    "notes": "Official IDP public practice pages. Enable only after robots.txt and parser validation."
+  },
+  {
+    "name": "IELTS Liz",
+    "base_url": "https://ieltsliz.com",
+    "source_type": "education_site",
+    "confidence": "medium_high",
+    "parser": "ielts_liz",
+    "enabled": false,
+    "urls": [
+      "https://ieltsliz.com/ielts-speaking-part-1-topics/",
+      "https://ieltsliz.com/ielts-speaking-part-2-topics/",
+      "https://ieltsliz.com/ielts-speaking-part-3-topics/"
+    ],
+    "notes": "High-quality education site, not official. Current access may present a verification challenge; never bypass it."
+  }
+]

@@ -23,7 +23,7 @@ from app.services.speaking_scoring_service import SpeakingScoringService
 
 
 router = APIRouter()
-MAX_DURATIONS: dict[PartType, int] = {"part1": 300, "part2": 300, "part3": 300}
+MAX_DURATIONS: dict[PartType, int] = {"part1": 180, "part2": 180, "part3": 180}
 
 
 @router.post("/tts")

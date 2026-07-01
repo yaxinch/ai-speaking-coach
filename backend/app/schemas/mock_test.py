@@ -1,12 +1,16 @@
 from datetime import datetime
 
+from typing import Literal
+
 from pydantic import BaseModel, Field, model_validator
 
 from app.schemas.agent import CueCard, PartType
 from app.schemas.speaking import VoiceFeedback, VoiceScore
 
 
-EXPECTED_PART_COUNTS: dict[PartType, int] = {"part1": 4, "part2": 1, "part3": 3}
+LEGACY_PART_COUNTS: dict[PartType, int] = {"part1": 4, "part2": 1, "part3": 3}
+BANK_PART_COUNTS: dict[PartType, int] = {"part1": 6, "part2": 1, "part3": 4}
+SUPPORTED_PART_COUNTS = (LEGACY_PART_COUNTS, BANK_PART_COUNTS)
 
 
 class MockQuestion(BaseModel):
@@ -14,12 +18,17 @@ class MockQuestion(BaseModel):
     question_index: int = Field(ge=1)
     question: str
     cue_card: CueCard | None = None
+    bank_question_id: str | None = None
+    topic: str | None = None
+    source: str | None = None
+    difficulty: Literal["easy", "medium", "hard", "unknown"] | None = None
 
 
 def validate_question_set(questions: list[MockQuestion]) -> list[MockQuestion]:
-    if len(questions) != 8:
-        raise ValueError("A full mock test must contain exactly 8 questions.")
-    for part_type, count in EXPECTED_PART_COUNTS.items():
+    counts = {part_type: sum(item.part_type == part_type for item in questions) for part_type in LEGACY_PART_COUNTS}
+    if counts not in SUPPORTED_PART_COUNTS:
+        raise ValueError("A full mock test must use either the legacy 4/1/3 or question-bank 6/1/4 profile.")
+    for part_type, count in counts.items():
         part_questions = [question for question in questions if question.part_type == part_type]
         if len(part_questions) != count:
             raise ValueError(f"{part_type} must contain exactly {count} questions.")
@@ -75,29 +84,11 @@ class MockTestReport(BaseModel):
     part2_feedback: PartFeedback
     part3_feedback: PartFeedback
 
-    @model_validator(mode="after")
-    def validate_analysis_counts(self):
-        parts = {
-            "part1": self.part1_feedback,
-            "part2": self.part2_feedback,
-            "part3": self.part3_feedback,
-        }
-        for part_type, feedback in parts.items():
-            count = EXPECTED_PART_COUNTS[part_type]
-            if len(feedback.question_analyses) != count:
-                raise ValueError(f"{part_type} must contain exactly {count} question analyses.")
-            if sorted(item.question_index for item in feedback.question_analyses) != list(range(1, count + 1)):
-                raise ValueError(f"{part_type} analysis indexes must be sequential.")
-        return self
-
-
 class EvaluateMockTestRequest(BaseModel):
     answers: list[MockAnswer]
 
     @model_validator(mode="after")
     def validate_answers(self):
-        if len(self.answers) != 8:
-            raise ValueError("A full mock test requires exactly 8 answers.")
         questions = [answer.question for answer in self.answers]
         validate_question_set(questions)
         for answer in self.answers:
@@ -106,6 +97,90 @@ class EvaluateMockTestRequest(BaseModel):
             if answer.part_type != answer.question.part_type or answer.question_index != answer.question.question_index:
                 raise ValueError("Answer metadata must match its question.")
         return self
+
+
+def validate_report_for_questions(report: MockTestReport, questions: list[MockQuestion]) -> None:
+    counts = {part_type: sum(item.part_type == part_type for item in questions) for part_type in LEGACY_PART_COUNTS}
+    feedback_by_part = {
+        "part1": report.part1_feedback,
+        "part2": report.part2_feedback,
+        "part3": report.part3_feedback,
+    }
+    for part_type, count in counts.items():
+        analyses = feedback_by_part[part_type].question_analyses
+        if len(analyses) != count or sorted(item.question_index for item in analyses) != list(range(1, count + 1)):
+            raise ValueError(f"{part_type} report analyses must match the submitted questions.")
+
+
+DifficultyValue = Literal["easy", "medium", "hard", "unknown"]
+
+
+class CamelModel(BaseModel):
+    """Wire DTO whose fields intentionally use the public camelCase contract."""
+
+
+class StartMockTestRequest(CamelModel):
+
+    practiceGoal: str | None = Field(default=None, max_length=300)
+
+
+class SessionQuestion(CamelModel):
+    id: str
+    text: str
+    topic: str
+    source: str
+    difficulty: DifficultyValue
+
+
+class SessionPart1Topic(CamelModel):
+    topic: str
+    questions: list[SessionQuestion]
+
+
+class SessionPart1(CamelModel):
+    topics: list[SessionPart1Topic]
+
+
+class SessionCueCard(CamelModel):
+    id: str
+    topic: str
+    prompt: str
+    bulletPoints: list[str]
+    preparationTimeSeconds: int = 60
+    speakingTimeSeconds: int = 120
+    source: str
+    difficulty: DifficultyValue
+
+
+class SessionPart2(CamelModel):
+    cueCard: SessionCueCard
+
+
+class SessionPart3(CamelModel):
+    questions: list[SessionQuestion]
+
+
+class MockSessionParts(CamelModel):
+    part1: SessionPart1
+    part2: SessionPart2
+    part3: SessionPart3
+
+
+class MockSessionMetadata(CamelModel):
+    retrievalUsed: bool
+    candidateCount: int
+    composerUsed: bool
+    fallbackUsed: bool
+    fallbackReason: str | None = None
+    createdAt: datetime
+
+
+class StartMockTestResponse(CamelModel):
+    sessionId: str
+    practiceGoal: str | None
+    mode: Literal["default", "goal_based"]
+    parts: MockSessionParts
+    metadata: MockSessionMetadata
 
 
 class EvaluateMockTestResponse(BaseModel):

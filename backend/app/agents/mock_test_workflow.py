@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.agents.mock_test_agent import MockTestAgent
 from app.llm.base import LLMProvider
-from app.schemas.mock_test import EvaluateMockTestRequest, EvaluateMockTestResponse
+from app.schemas.mock_test import EvaluateMockTestRequest, EvaluateMockTestResponse, validate_report_for_questions
 from app.services.mock_test_service import MockTestService
 from app.services.audio_asset_service import AudioAssetService
 
@@ -22,6 +22,10 @@ class MockTestWorkflow:
             if asset is None or asset.status != "pending":
                 raise HTTPException(status_code=409, detail="One or more mock test audio recordings are unavailable.")
         report = await self.agent.evaluate(answers)
+        try:
+            validate_report_for_questions(report, [answer.question for answer in answers])
+        except ValueError as exc:
+            raise HTTPException(status_code=502, detail="AI returned an incomplete mock test report.") from exc
         record = self.service.create_record(answers, report)
         if audio_asset_ids:
             audio_service.attach(audio_asset_ids, owner_type="mock_test", owner_id=record.id)

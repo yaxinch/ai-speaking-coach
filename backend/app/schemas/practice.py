@@ -1,8 +1,54 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from typing import Literal
 
-from app.schemas.agent import ExaminerQuestion, FeedbackResult, PartType
+from pydantic import BaseModel, Field
+
+from app.schemas.agent import ExaminerQuestion, FeedbackResult, PartType, QuestionDifficulty
+
+
+class StartSectionPracticeRequest(BaseModel):
+    part: PartType
+    practiceGoal: str | None = Field(default=None, max_length=300)
+
+
+class SectionCueCard(BaseModel):
+    id: str
+    topic: str
+    prompt: str
+    bulletPoints: list[str]
+    preparationTimeSeconds: int = 60
+    speakingTimeSeconds: int = 120
+    source: str
+    difficulty: QuestionDifficulty
+
+
+class SectionPracticeItem(BaseModel):
+    type: Literal["part1_question", "part2_cue_card", "part3_question"]
+    id: str
+    topic: str
+    text: str
+    source: str
+    difficulty: QuestionDifficulty
+    cueCard: SectionCueCard | None = None
+
+
+class SectionPracticeMetadata(BaseModel):
+    retrievalUsed: bool
+    candidateCount: int
+    selectorUsed: bool
+    fallbackUsed: bool
+    fallbackReason: str | None = None
+    createdAt: datetime
+
+
+class StartSectionPracticeResponse(BaseModel):
+    selectionId: str
+    mode: Literal["default", "goal_based"]
+    practiceGoal: str | None
+    part: PartType
+    item: SectionPracticeItem
+    metadata: SectionPracticeMetadata
 
 
 class PracticeSummary(BaseModel):

@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from app.schemas.agent import Correction, ExaminerQuestion, PartType, PronunciationAssessment
+from app.schemas.agent import Correction, ExaminerQuestion, PartType, PronunciationAssessment, QuestionDifficulty
 
 
 SpeakingMode = Literal["single-practice", "mock-test"]
@@ -50,6 +50,10 @@ class VoiceQuestionPayload(BaseModel):
     part_type: PartType
     question: str
     cue_card: dict | None = None
+    bank_question_id: str | None = None
+    topic: str | None = None
+    source: str | None = None
+    difficulty: QuestionDifficulty | None = None
 
     def to_examiner_question(self) -> ExaminerQuestion:
         return ExaminerQuestion.model_validate(self.model_dump())

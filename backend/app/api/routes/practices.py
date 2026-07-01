@@ -2,10 +2,30 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.schemas.practice import PracticeDetail, PracticeSummary
+from app.llm.base import LLMProvider
+from app.providers.factory import get_llm_provider
+from app.schemas.practice import (
+    PracticeDetail,
+    PracticeSummary,
+    StartSectionPracticeRequest,
+    StartSectionPracticeResponse,
+)
 from app.services.practice_service import PracticeService
+from app.services.section_practice_composer_service import SectionPracticeComposerService, SectionPracticeUnavailable
 
 router = APIRouter()
+
+
+@router.post("/section/start", response_model=StartSectionPracticeResponse)
+async def start_section_practice(
+    request: StartSectionPracticeRequest,
+    db: Session = Depends(get_db),
+    llm: LLMProvider = Depends(get_llm_provider),
+) -> StartSectionPracticeResponse:
+    try:
+        return await SectionPracticeComposerService(db, llm).start(request.part, request.practiceGoal)
+    except SectionPracticeUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.get("", response_model=list[PracticeSummary])

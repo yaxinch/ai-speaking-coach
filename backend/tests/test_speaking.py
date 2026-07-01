@@ -85,7 +85,15 @@ class SpeakingApiTests(unittest.TestCase):
         self.assertEqual(response.content[:4], b"RIFF")
 
     def test_voice_answer_persists_targeted_recording_and_transcript(self):
-        question = {"part_type": "part1", "question": "Do you work or study?", "cue_card": None}
+        question = {
+            "part_type": "part1",
+            "question": "Do you work or study?",
+            "cue_card": None,
+            "bank_question_id": "bank-part1-1",
+            "topic": "work",
+            "source": "Reviewed practice source",
+            "difficulty": "easy",
+        }
         wav_audio = pcm_to_wav(b"\x00\x00" * 16000, sample_rate=16000)
         response = self.client.post(
             "/api/speaking/voice-answer",
@@ -95,7 +103,7 @@ class SpeakingApiTests(unittest.TestCase):
                 "question_id": "part1-q1",
                 "question_text": question["question"],
                 "question_payload": json.dumps(question),
-                "duration": "300",
+                "duration": "180",
                 "mime_type": "audio/wav",
             },
             files={"audio": ("part1-q1.wav", wav_audio, "audio/wav")},
@@ -112,6 +120,8 @@ class SpeakingApiTests(unittest.TestCase):
         self.assertEqual(detail.status_code, 200)
         self.assertEqual(detail.json()["answer_source"], "voice")
         self.assertEqual(detail.json()["audio_url"], body["audio_url"])
+        self.assertEqual(detail.json()["question"]["bank_question_id"], "bank-part1-1")
+        self.assertEqual(detail.json()["question"]["source"], "Reviewed practice source")
         audio = self.client.get(body["audio_url"])
         self.assertEqual(audio.status_code, 200)
         self.assertEqual(audio.content, wav_audio)

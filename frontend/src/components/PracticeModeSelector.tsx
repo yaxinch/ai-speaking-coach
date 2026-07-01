@@ -7,7 +7,7 @@ const modes = [
   {
     mode: "full_mock" as const,
     title: "Full Speaking Mock Test",
-    description: "Complete Part 1, Part 2, and Part 3 in one continuous 8-question session, then receive a full report.",
+    description: "Complete Part 1, Part 2, and Part 3 in one continuous 11-question session, then receive a full report.",
     icon: AssignmentTurnedInOutlinedIcon
   },
   {

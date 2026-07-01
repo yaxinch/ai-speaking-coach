@@ -40,7 +40,7 @@ function clock(seconds: number) {
 
 export const VoiceAnswerRecorder = forwardRef<VoiceAnswerRecorderHandle, VoiceAnswerRecorderProps>(
   function VoiceAnswerRecorder(
-    { value, onChange, maxDuration = 300, disabled, questionId, onRecordingStart, onReRecord, onPlaybackStart, onRecordingStateChange },
+    { value, onChange, maxDuration = 180, disabled, questionId, onRecordingStart, onReRecord, onPlaybackStart, onRecordingStateChange },
     ref
   ) {
     const [elapsed, setElapsed] = useState(0);

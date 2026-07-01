@@ -3,28 +3,32 @@ import ArrowBackOutlinedIcon from "@mui/icons-material/ArrowBackOutlined";
 import RefreshOutlinedIcon from "@mui/icons-material/RefreshOutlined";
 import SendOutlinedIcon from "@mui/icons-material/SendOutlined";
 import { Button, Stack, Typography } from "@mui/material";
-import { generateQuestion } from "../api/examiner";
+import { startSectionPractice } from "../api/practices";
 import { submitVoiceAnswer, voiceResultToFeedback } from "../api/speaking";
 import { ErrorState } from "../components/ErrorState";
 import { LoadingState } from "../components/LoadingState";
 import { SpokenQuestionCard } from "../components/SpokenQuestionCard";
 import { VoiceAnswerRecorder, type VoiceAnswerRecorderHandle } from "../components/VoiceAnswerRecorder";
 import { useExaminerVoice } from "../hooks/useExaminerVoice";
-import type { ExaminerQuestion, FeedbackResult, PartType, VoiceAnswerValue } from "../types/practice";
+import type { ExaminerQuestion, FeedbackResult, PartType, SectionPracticeStart, VoiceAnswerValue } from "../types/practice";
 
 const descriptions: Record<PartType, string> = {
   part1: "Short daily-life answers. Focus on natural responses with one or two details.",
   part2: "Cue card response. Build a structured story with clear sequencing and examples.",
   part3: "Abstract discussion. Expand your opinion with reasons, comparisons, and consequences."
 };
-const maxDurations: Record<PartType, number> = { part1: 300, part2: 300, part3: 300 };
+const maxDurations: Record<PartType, number> = { part1: 180, part2: 180, part3: 180 };
 
 export function PracticePage({
   partType,
+  practiceGoal,
+  initialSelection,
   onBack,
   onResult
 }: {
   partType: PartType;
+  practiceGoal: string;
+  initialSelection?: SectionPracticeStart;
   onBack: () => void;
   onResult: (result: {
     practiceId: string;
@@ -34,10 +38,12 @@ export function PracticePage({
     feedback: FeedbackResult;
     audioUrl?: string;
     isMockTranscript?: boolean;
+    practiceGoal: string;
   }) => void;
 }) {
-  const [question, setQuestion] = useState<ExaminerQuestion | null>(null);
-  const [questionId, setQuestionId] = useState("");
+  const [question, setQuestion] = useState<ExaminerQuestion | null>(() => initialSelection ? sectionSelectionToQuestion(initialSelection) : null);
+  const [questionId, setQuestionId] = useState(initialSelection?.selectionId ?? "");
+  const [selectionMetadata, setSelectionMetadata] = useState(initialSelection?.metadata ?? null);
   const [recording, setRecording] = useState<VoiceAnswerValue | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [loadingQuestion, setLoadingQuestion] = useState(false);
@@ -59,8 +65,10 @@ export function PracticePage({
     if (questionId) examinerVoice.clear(questionId);
     clearRecording();
     try {
-      setQuestion(await generateQuestion(partType));
-      setQuestionId(`targeted-${partType}-${crypto.randomUUID()}`);
+      const selection = await startSectionPractice(partType, practiceGoal);
+      setQuestion(sectionSelectionToQuestion(selection));
+      setQuestionId(selection.selectionId);
+      setSelectionMetadata(selection.metadata);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate question.");
     } finally {
@@ -90,7 +98,8 @@ export function PracticePage({
         userAnswer: result.transcript,
         feedback: voiceResultToFeedback(result),
         audioUrl: result.audio_url,
-        isMockTranscript: result.is_mock_transcript
+        isMockTranscript: result.is_mock_transcript,
+        practiceGoal
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to evaluate answer.");
@@ -100,7 +109,7 @@ export function PracticePage({
   }
 
   useEffect(() => {
-    handleGenerate();
+    if (!initialSelection) handleGenerate();
   }, [partType]);
 
   useEffect(() => () => {
@@ -136,6 +145,11 @@ export function PracticePage({
       </Stack>
 
       {error ? <ErrorState message={error} /> : null}
+      {selectionMetadata?.fallbackUsed ? (
+        <Typography color="warning.main" sx={{ fontSize: 14 }}>
+          Semantic selection was unavailable, so an approved fallback question was selected.
+        </Typography>
+      ) : null}
       {loadingQuestion ? <LoadingState label="Generating examiner question..." /> : null}
       {question && !loadingQuestion ? (
         <SpokenQuestionCard
@@ -170,4 +184,25 @@ export function PracticePage({
       </Button>
     </Stack>
   );
+}
+
+export function sectionSelectionToQuestion(selection: SectionPracticeStart): ExaminerQuestion {
+  const cue = selection.item.cueCard;
+  return {
+    part_type: selection.part,
+    question: selection.item.text,
+    cue_card: cue
+      ? {
+          topic: cue.topic,
+          bullet_points: cue.bulletPoints,
+          preparation_instruction: `You have ${cue.preparationTimeSeconds} seconds to prepare and up to ${cue.speakingTimeSeconds} seconds to speak.`,
+          preparation_time_seconds: cue.preparationTimeSeconds,
+          speaking_time_seconds: cue.speakingTimeSeconds
+        }
+      : null,
+    bank_question_id: selection.item.id,
+    topic: selection.item.topic,
+    source: selection.item.source,
+    difficulty: selection.item.difficulty
+  };
 }

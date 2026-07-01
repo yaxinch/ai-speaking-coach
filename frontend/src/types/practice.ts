@@ -4,12 +4,51 @@ export interface CueCard {
   topic: string;
   bullet_points: string[];
   preparation_instruction: string;
+  preparation_time_seconds?: number;
+  speaking_time_seconds?: number;
 }
 
 export interface ExaminerQuestion {
   part_type: PartType;
   question: string;
   cue_card: CueCard | null;
+  bank_question_id?: string | null;
+  topic?: string | null;
+  source?: string | null;
+  difficulty?: "easy" | "medium" | "hard" | "unknown" | null;
+}
+
+export interface SectionPracticeStart {
+  selectionId: string;
+  mode: "default" | "goal_based";
+  practiceGoal: string | null;
+  part: PartType;
+  item: {
+    type: "part1_question" | "part2_cue_card" | "part3_question";
+    id: string;
+    topic: string;
+    text: string;
+    source: string;
+    difficulty: "easy" | "medium" | "hard" | "unknown";
+    cueCard: null | {
+      id: string;
+      topic: string;
+      prompt: string;
+      bulletPoints: string[];
+      preparationTimeSeconds: number;
+      speakingTimeSeconds: number;
+      source: string;
+      difficulty: "easy" | "medium" | "hard" | "unknown";
+    };
+  };
+  metadata: {
+    retrievalUsed: boolean;
+    candidateCount: number;
+    selectorUsed: boolean;
+    fallbackUsed: boolean;
+    fallbackReason: string | null;
+    createdAt: string;
+  };
 }
 
 export interface PracticeSummary {
@@ -119,6 +158,48 @@ export type PracticeMode = "targeted" | "full_mock";
 
 export interface MockQuestion extends ExaminerQuestion {
   question_index: number;
+  bank_question_id?: string | null;
+  topic?: string | null;
+  source?: string | null;
+  difficulty?: "easy" | "medium" | "hard" | "unknown" | null;
+}
+
+export interface SessionQuestion {
+  id: string;
+  text: string;
+  topic: string;
+  source: string;
+  difficulty: "easy" | "medium" | "hard" | "unknown";
+}
+
+export interface MockSession {
+  sessionId: string;
+  practiceGoal: string | null;
+  mode: "default" | "goal_based";
+  parts: {
+    part1: { topics: Array<{ topic: string; questions: SessionQuestion[] }> };
+    part2: {
+      cueCard: {
+        id: string;
+        topic: string;
+        prompt: string;
+        bulletPoints: string[];
+        preparationTimeSeconds: number;
+        speakingTimeSeconds: number;
+        source: string;
+        difficulty: "easy" | "medium" | "hard" | "unknown";
+      };
+    };
+    part3: { questions: SessionQuestion[] };
+  };
+  metadata: {
+    retrievalUsed: boolean;
+    candidateCount: number;
+    composerUsed: boolean;
+    fallbackUsed: boolean;
+    fallbackReason: string | null;
+    createdAt: string;
+  };
 }
 
 export interface MockAnswer {

@@ -42,8 +42,54 @@ Output schema:
     ]
 
 
+def build_mock_session_composer_prompt(
+    practice_goal: str,
+    part1_candidates: list[dict],
+    part2_candidates: list[dict],
+    part3_candidates: list[dict],
+) -> list[dict[str, str]]:
+    payload = {
+        "practiceGoal": practice_goal,
+        "part1Candidates": part1_candidates,
+        "part2Candidates": part2_candidates,
+        "part3Candidates": part3_candidates,
+    }
+    return [
+        {
+            "role": "system",
+            "content": "You compose IELTS Speaking sessions from an approved candidate list. Return strict JSON only.",
+        },
+        {
+            "role": "user",
+            "content": f"""
+Select a coherent IELTS Speaking session for the user's practice goal.
+
+Candidates:
+{json.dumps(payload, ensure_ascii=False)}
+
+Rules:
+- Select exactly two Part 1 topics and exactly three Part 1 question IDs under each topic.
+- Select exactly one Part 2 cue card ID.
+- Select exactly four Part 3 question IDs, preferably related to the selected Part 2 topic.
+- Every ID must come from the matching candidate list.
+- Do not rewrite, invent, or return question text.
+- Do not repeat an ID.
+- Return JSON only, without markdown.
+
+Output:
+{{
+  "part1": {{"topics": [{{"topic": "candidate topic", "questionIds": ["id", "id", "id"]}}]}},
+  "part2": {{"cueCardId": "id"}},
+  "part3": {{"questionIds": ["id", "id", "id", "id"]}}
+}}
+""".strip(),
+        },
+    ]
+
+
 def build_mock_test_feedback_prompt(answers: list[MockAnswer]) -> list[dict[str, str]]:
     payload = [answer.model_dump() for answer in answers]
+    counts = {part: sum(answer.part_type == part for answer in answers) for part in ("part1", "part2", "part3")}
     return [
         {
             "role": "system",
@@ -59,9 +105,9 @@ Rules:
 - Evaluate fluency/coherence, lexical resource, and grammatical range/accuracy from text.
 - Do not evaluate pronunciation.
 - Return one overall assessment, feedback for all three parts, and one analysis per question.
-- part1_feedback.question_analyses must contain exactly 4 items with indexes 1-4.
-- part2_feedback.question_analyses must contain exactly 1 item with index 1.
-- part3_feedback.question_analyses must contain exactly 3 items with indexes 1-3.
+- part1_feedback.question_analyses must contain exactly {counts['part1']} items with sequential indexes.
+- part2_feedback.question_analyses must contain exactly {counts['part2']} item with sequential indexes.
+- part3_feedback.question_analyses must contain exactly {counts['part3']} items with sequential indexes.
 - Preserve each question_index exactly.
 - Be specific, practical, and not overly generous.
 - Return strict JSON only, without markdown.
@@ -102,11 +148,7 @@ Output schema:
     "summary": "string",
     "strengths": ["string"],
     "weaknesses": ["string"],
-    "question_analyses": [
-      {{ "question_index": 1, "band_estimate": 0.0, "feedback": "string", "strengths": ["string"], "weaknesses": ["string"], "improved_answer": "string" }},
-      {{ "question_index": 2, "band_estimate": 0.0, "feedback": "string", "strengths": ["string"], "weaknesses": ["string"], "improved_answer": "string" }},
-      {{ "question_index": 3, "band_estimate": 0.0, "feedback": "string", "strengths": ["string"], "weaknesses": ["string"], "improved_answer": "string" }}
-    ]
+            "question_analyses": [{{ "question_index": 1, "band_estimate": 0.0, "feedback": "repeat this object for every submitted Part 3 question", "strengths": ["string"], "weaknesses": ["string"], "improved_answer": "string" }}]
   }}
 }}
 """.strip(),

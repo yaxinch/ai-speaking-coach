@@ -1,0 +1,112 @@
+[
+  {
+    "name": "British Council Take IELTS - Speaking Practice Test",
+    "base_url": "https://takeielts.britishcouncil.org",
+    "source_type": "official_sample",
+    "confidence": "high",
+    "parser": "british_council_speaking",
+    "enabled": false,
+    "urls": [
+      "https://takeielts.britishcouncil.org/take-ielts/prepare/free-ielts-english-practice-tests/speaking",
+      "https://takeielts.britishcouncil.org/take-ielts/prepare/free-ielts-english-practice-tests/speaking/part-1",
+      "https://takeielts.britishcouncil.org/take-ielts/prepare/free-ielts-english-practice-tests/speaking/part-2",
+      "https://takeielts.britishcouncil.org/take-ielts/prepare/free-ielts-english-practice-tests/speaking/part-3",
+      "https://takeielts.britishcouncil.org/take-ielts/prepare/free-ielts-english-practice-tests/speaking-2/part-1"
+    ],
+    "notes": "Official British Council Take IELTS public speaking practice pages. Enable only after robots.txt check and small dry-run."
+  },
+  {
+    "name": "IELTS.org Official Sample Questions",
+    "base_url": "https://ielts.org",
+    "source_type": "official_sample",
+    "confidence": "high",
+    "parser": "ielts_org_sample",
+    "enabled": false,
+    "urls": [
+      "https://ielts.org/take-a-test/preparation-resources/sample-test-questions",
+      "https://ielts.org/take-a-test/preparation-resources/sample-test-questions/academic-test",
+      "https://ielts.org/take-a-test/preparation-resources/sample-test-questions/general-training-test",
+      "https://ielts.org/cdn/ielts-sample-tests/ielts-speaking-sample-tasks-2023.pdf"
+    ],
+    "notes": "Official IELTS.org sample pages. PDF parsing is intentionally not implemented; use manual import after review."
+  },
+  {
+    "name": "IDP IELTS - Speaking Practice Questions",
+    "base_url": "https://ielts.idp.com",
+    "source_type": "official_sample",
+    "confidence": "high",
+    "parser": "idp_speaking",
+    "enabled": false,
+    "urls": [
+      "https://ielts.idp.com/prepare/article-free-speaking-practice-questions",
+      "https://ielts.idp.com/prepare/article-free-practice-tests"
+    ],
+    "notes": "Official IDP public practice pages. Enable only after robots.txt and parser validation."
+  },
+  {
+    "name": "IELTS Liz",
+    "base_url": "https://ieltsliz.com",
+    "source_type": "education_site",
+    "confidence": "medium_high",
+    "parser": "ielts_liz",
+    "enabled": false,
+    "urls": [
+      "https://ieltsliz.com/ielts-speaking-part-1-topics/",
+      "https://ieltsliz.com/ielts-speaking-part-2-topics/",
+      "https://ieltsliz.com/ielts-speaking-part-3-topics/"
+    ],
+    "notes": "High-quality education site, not official. Current access may present a verification challenge; never bypass it."
+  },
+  {
+    "name": "Examword IELTS Speaking Questions",
+    "base_url": "https://www.examword.com",
+    "source_type": "recent_recalled",
+    "source_format": "webpage",
+    "confidence": "medium",
+    "parser": "examword",
+    "enabled": false,
+    "urls": [
+      "https://www.examword.com/ielts-practice/speaking-exam-question"
+    ],
+    "notes": "Third-party internet/recalled candidate questions. Never present as official or verified real exam content."
+  },
+  {
+    "name": "HowToDoIELTS Recent Speaking Topics",
+    "base_url": "https://howtodoielts.com",
+    "source_type": "education_site",
+    "source_format": "webpage",
+    "confidence": "medium",
+    "parser": "generic_topic_question_list",
+    "enabled": false,
+    "urls": [
+      "https://howtodoielts.com/recent-ielts-speaking-topics-2022/"
+    ],
+    "notes": "Education-site topic and numbered-question lists. Exclude answers, author content, ads, and course calls to action."
+  },
+  {
+    "name": "IELTS Advantage Speaking Questions",
+    "base_url": "https://www.ieltsadvantage.com",
+    "source_type": "education_site",
+    "source_format": "webpage",
+    "confidence": "medium_high",
+    "parser": "generic_question_list",
+    "enabled": false,
+    "urls": [
+      "https://www.ieltsadvantage.com/2023/02/19/ielts-speaking-questions/"
+    ],
+    "notes": "Large third-party question page. Extract only explicit speaking questions; exclude newsletters and marketing content."
+  },
+  {
+    "name": "BestMyTest IELTS Speaking",
+    "base_url": "https://www.bestmytest.com",
+    "source_type": "education_site",
+    "source_format": "webpage",
+    "confidence": "medium",
+    "parser": "generic_question_list",
+    "enabled": false,
+    "urls": [
+      "https://www.bestmytest.com/ielts/speaking"
+    ],
+    "notes": "Conservative extraction only. Skip templates, answers, login prompts, and practice-product calls to action."
+  }
+]

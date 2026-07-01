@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     tts_allowed_voices: str = "Kore"
     asr_provider: str = "mock"
     gemini_asr_model: str = "gemini-2.5-flash"
+    gemini_embedding_model: str = "gemini-embedding-001"
+    gemini_embedding_dimensions: int = 768
     pronunciation_provider: str = "disabled"
     azure_speech_key: str = ""
     azure_speech_region: str = ""

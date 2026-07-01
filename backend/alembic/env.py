@@ -7,9 +7,10 @@ from app.database import Base, database_url
 from app.models.audio_asset import AudioAsset
 from app.models.mock_test import MockTestRecord
 from app.models.practice import PracticeRecord
+from app.question_bank.models import SpeakingQuestion
 
 
-_ = (AudioAsset, MockTestRecord, PracticeRecord)
+_ = (AudioAsset, MockTestRecord, PracticeRecord, SpeakingQuestion)
 config = context.config
 config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
 if config.config_file_name:

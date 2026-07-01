@@ -40,6 +40,7 @@ def init_db() -> None:
     from app.models.audio_asset import AudioAsset
     from app.models.mock_test import MockTestRecord
     from app.models.practice import PracticeRecord
+    from app.question_bank.models import SpeakingQuestion
 
-    _ = (PracticeRecord, MockTestRecord, AudioAsset)
+    _ = (PracticeRecord, MockTestRecord, AudioAsset, SpeakingQuestion)
     Base.metadata.create_all(bind=engine)

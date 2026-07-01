@@ -61,7 +61,7 @@ describe("VoiceAnswerRecorder", () => {
     vi.unstubAllGlobals();
   });
 
-  it("stops automatically at the 300 second limit", () => {
+  it("stops automatically at the 180 second limit", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-30T00:00:00Z"));
     const onRecordingStateChange = vi.fn();
@@ -77,10 +77,10 @@ describe("VoiceAnswerRecorder", () => {
       <VoiceAnswerRecorder questionId="question-1" value={null} onChange={vi.fn()} onRecordingStateChange={onRecordingStateChange} />
     );
 
-    act(() => vi.advanceTimersByTime(300_000));
+    act(() => vi.advanceTimersByTime(180_000));
 
     expect(mediaRecorder.stopRecording).toHaveBeenCalled();
-    expect(screen.getByText("05:00")).toBeInTheDocument();
+    expect(screen.getByText("03:00")).toBeInTheDocument();
     expect(onRecordingStateChange).toHaveBeenCalledWith(true);
   });
 });

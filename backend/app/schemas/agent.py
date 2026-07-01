@@ -3,6 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 PartType = Literal["part1", "part2", "part3"]
+QuestionDifficulty = Literal["easy", "medium", "hard", "unknown"]
 
 
 class WeakPronunciationWord(BaseModel):
@@ -34,6 +35,10 @@ class ExaminerQuestion(BaseModel):
     part_type: PartType
     question: str
     cue_card: CueCard | None = None
+    bank_question_id: str | None = None
+    topic: str | None = None
+    source: str | None = None
+    difficulty: QuestionDifficulty | None = None
 
 
 class GenerateQuestionRequest(BaseModel):
