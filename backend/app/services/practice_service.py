@@ -69,3 +69,14 @@ class PracticeService:
             overall_band=record.overall_band,
             created_at=record.created_at,
         )
+
+    def delete_record(self, record_id: str) -> bool:
+        record = self.db.get(PracticeRecord, record_id)
+        if record is None:
+            return False
+        from app.services.audio_asset_service import AudioAssetService
+
+        AudioAssetService(self.db).delete_for_owner(owner_type="practice", owner_id=record_id, commit=False)
+        self.db.delete(record)
+        self.db.commit()
+        return True

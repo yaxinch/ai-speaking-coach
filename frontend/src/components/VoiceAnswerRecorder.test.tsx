@@ -83,4 +83,20 @@ describe("VoiceAnswerRecorder", () => {
     expect(screen.getByText("03:00")).toBeInTheDocument();
     expect(onRecordingStateChange).toHaveBeenCalledWith(true);
   });
+
+  it("clears the previous local answer before re-recording", () => {
+    const onChange = vi.fn();
+    render(
+      <VoiceAnswerRecorder
+        questionId="question-1"
+        value={{ audioBlob: new Blob(["voice"]), audioUrl: "blob:answer", duration: 12 }}
+        onChange={onChange}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Re-record" }));
+
+    expect(mediaRecorder.clearBlobUrl).toHaveBeenCalled();
+    expect(onChange).toHaveBeenCalledWith(null);
+  });
 });

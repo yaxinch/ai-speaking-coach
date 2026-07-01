@@ -2,25 +2,23 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ArrowBackOutlinedIcon from "@mui/icons-material/ArrowBackOutlined";
 import ArrowForwardOutlinedIcon from "@mui/icons-material/ArrowForwardOutlined";
 import { Alert, Box, Button, Chip, LinearProgress, Stack, TextField, Typography } from "@mui/material";
-import { evaluateMockTest, startMockTest } from "../api/mockTests";
-import { deletePendingAudio, submitVoiceAnswer } from "../api/speaking";
+import { startMockTest } from "../api/mockTests";
+import { submitFullMockTest } from "../api/speaking";
 import { ErrorState } from "../components/ErrorState";
 import { LoadingState } from "../components/LoadingState";
 import { SpokenQuestionCard } from "../components/SpokenQuestionCard";
 import { VoiceAnswerRecorder, type VoiceAnswerRecorderHandle } from "../components/VoiceAnswerRecorder";
 import { useExaminerVoice } from "../hooks/useExaminerVoice";
-import type { MockAnswer, MockQuestion, MockSession, MockTestReport, PartType, VoiceAnswerResult, VoiceAnswerValue } from "../types/practice";
+import type { MockAnswer, MockQuestion, MockSession, MockTestReport, PartType, VoiceAnswerValue } from "../types/practice";
 
 const order: Record<PartType, number> = { part1: 1, part2: 2, part3: 3 };
 const labels: Record<PartType, string> = { part1: "Part 1", part2: "Part 2", part3: "Part 3" };
 const maxDurations: Record<PartType, number> = { part1: 180, part2: 180, part3: 180 };
 
-type AnswerStatus = "empty" | "recorded" | "submitting" | "completed" | "failed";
+type AnswerStatus = "empty" | "recorded";
 interface MockVoiceState {
   recording?: VoiceAnswerValue | null;
-  result?: VoiceAnswerResult;
   status: AnswerStatus;
-  errorMessage?: string;
 }
 
 export function FullMockTestPage({
@@ -52,7 +50,8 @@ export function FullMockTestPage({
   const questionIdFor = (question: MockQuestion) => `mock-${sessionIdRef.current}-${keyFor(question)}`;
   const currentKey = current ? keyFor(current) : "";
   const currentAnswer = answers[currentKey] ?? { status: "empty" as const };
-  const completed = sortedQuestions.filter((question) => answers[keyFor(question)]?.status === "completed").length;
+  const currentVoiceState = current ? examinerVoice.voices[questionIdFor(current)] : undefined;
+  const completed = sortedQuestions.filter((question) => answers[keyFor(question)]?.status === "recorded").length;
 
   useEffect(() => () => {
     examinerVoice.stop();
@@ -102,58 +101,18 @@ export function FullMockTestPage({
     setError("");
   }
 
-  async function handleReRecord() {
-    const priorAsset = currentAnswer.result?.audio_asset_id;
-    if (priorAsset) {
-      try {
-        await deletePendingAudio(priorAsset);
-      } catch {
-        // The 24-hour pending cleanup remains the fallback if this best-effort delete fails.
-      }
+  function handleNext() {
+    if (isRecording) {
+      setError("Please stop recording before moving to the next question.");
+      return;
     }
-  }
-
-  async function submitCurrent(): Promise<VoiceAnswerResult | null> {
-    if (!current || !currentAnswer.recording?.audioBlob) {
-      setError("Please record your answer before moving to the next question.");
-      return null;
+    if (!currentAnswer.recording?.audioBlob) {
+      return;
     }
-    if (currentAnswer.status === "completed" && currentAnswer.result) return currentAnswer.result;
-    setSubmitting(true);
-    setError("");
-    setAnswers((existing) => ({ ...existing, [currentKey]: { ...existing[currentKey], status: "submitting", errorMessage: undefined } }));
-    try {
-      const result = await submitVoiceAnswer({
-        mode: "mock-test",
-        partType: current.part_type,
-        questionId: questionIdFor(current),
-        question: current,
-        recording: currentAnswer.recording
-      });
-      revokeLocalUrl(currentAnswer.recording.audioUrl);
-      setAnswers((existing) => ({
-        ...existing,
-        [currentKey]: {
-          recording: { ...currentAnswer.recording, audioUrl: result.audio_url },
-          result,
-          status: "completed"
-        }
-      }));
-      return result;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to transcribe and score this answer.";
-      setAnswers((existing) => ({ ...existing, [currentKey]: { ...existing[currentKey], status: "failed", errorMessage: message } }));
-      setError(message);
-      return null;
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function handleNext() {
     examinerVoice.stop();
     recorderRef.current?.stopPlayback();
-    if (await submitCurrent()) setCurrentIndex((value) => value + 1);
+    setError("");
+    setCurrentIndex((value) => value + 1);
   }
 
   function handlePrevious() {
@@ -164,45 +123,40 @@ export function FullMockTestPage({
   }
 
   async function handleFinish() {
-    const currentResult = await submitCurrent();
-    if (!currentResult) return;
-    const latestAnswers: Record<string, MockVoiceState> = {
-      ...answers,
-      [currentKey]: {
-        ...currentAnswer,
-        result: currentResult,
-        status: "completed",
-        recording: currentAnswer.recording
-          ? { ...currentAnswer.recording, audioUrl: currentResult.audio_url }
-          : currentAnswer.recording
-      }
-    };
-    const incomplete = sortedQuestions.filter((question) => latestAnswers[keyFor(question)]?.status !== "completed");
-    if (incomplete.length) {
-      setError(incomplete.map((question) => `${labels[question.part_type]} Question ${question.question_index} is not completed.`).join(" "));
+    if (isRecording) {
+      setError("Please stop recording before finishing the test.");
       return;
     }
-    const payload: MockAnswer[] = sortedQuestions.map((question) => {
-      const result = latestAnswers[keyFor(question)].result!;
-      return {
-        part_type: question.part_type,
-        question_index: question.question_index,
-        question,
-        answer_text: result.transcript,
-        audio_url: result.audio_url,
-        audio_asset_id: result.audio_asset_id,
-        transcript_text: result.transcript,
-        voice_score: result.score,
-        voice_feedback: result.feedback
-      };
-    });
+    const incomplete = sortedQuestions.filter((question) => !answers[keyFor(question)]?.recording?.audioBlob);
+    if (incomplete.length) {
+      setError(incomplete.map((question) => (
+        question.part_type === "part2"
+          ? "Part 2 Cue Card not recorded"
+          : `${labels[question.part_type]} Question ${question.question_index} not recorded`
+      )).join(" · "));
+      return;
+    }
+    examinerVoice.stop();
+    recorderRef.current?.stopPlayback();
     setSubmitting(true);
     setError("");
     try {
-      const result = await evaluateMockTest(payload);
-      onResult({ mockTestId: result.mock_test_id, answers: payload, report: result.report });
+      const result = await submitFullMockTest({
+        testId: sessionIdRef.current,
+        questions: sortedQuestions.map((question) => {
+          const recording = answers[keyFor(question)].recording!;
+          return {
+            questionId: questionIdFor(question),
+            question,
+            audioBlob: recording.audioBlob!,
+            duration: recording.duration ?? 0,
+            mimeType: recording.mimeType
+          };
+        })
+      });
+      onResult({ mockTestId: result.mock_test_id, answers: result.answers, report: result.report });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to generate the final mock test report.");
+      setError(err instanceof Error ? err.message : "Failed to transcribe and score the full mock test. Your recordings are still available; please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -213,7 +167,7 @@ export function FullMockTestPage({
       <Stack spacing={2.25} sx={{ maxWidth: 950, alignItems: "flex-start" }}>
         <Typography variant="h2">Experience the Complete IELTS Speaking Test Flow</Typography>
         <Typography color="text.secondary" sx={{ maxWidth: 760, lineHeight: 1.65 }}>
-          Record 6 Part 1 answers across two topics, 1 Part 2 response, and 4 Part 3 answers. Each recording is transcribed and scored before a final report is generated.
+          Record 6 Part 1 answers across two topics, 1 Part 2 response, and 4 Part 3 answers. Your recordings are analyzed together after you finish the test.
         </Typography>
         <TextField
           label="Practice goal"
@@ -238,7 +192,7 @@ export function FullMockTestPage({
   const questionId = questionIdFor(current);
   const partProgress = (part: PartType) => {
     const partQuestions = sortedQuestions.filter((item) => item.part_type === part);
-    const completed = partQuestions.filter((item) => answers[keyFor(item)]?.status === "completed").length;
+    const completed = partQuestions.filter((item) => answers[keyFor(item)]?.status === "recorded").length;
     const currentPosition = part === current.part_type
       ? partQuestions.findIndex((item) => keyFor(item) === keyFor(current)) + 1
       : 0;
@@ -264,7 +218,7 @@ export function FullMockTestPage({
       ) : null}
       <SpokenQuestionCard
         question={current}
-        voiceState={examinerVoice.voices[questionId]}
+        voiceState={currentVoiceState}
         onPlay={() => examinerVoice.play(questionId, current.question)}
         disabled={submitting || isRecording}
       />
@@ -273,28 +227,27 @@ export function FullMockTestPage({
         value={currentAnswer.recording}
         onChange={handleRecordingChange}
         maxDuration={maxDurations[current.part_type]}
-        disabled={submitting}
+        disabled={submitting || !currentVoiceState?.hasPlayed || currentVoiceState.isPlaying}
         questionId={questionId}
         onRecordingStart={examinerVoice.stop}
         onPlaybackStart={examinerVoice.stop}
-        onReRecord={handleReRecord}
         onRecordingStateChange={setIsRecording}
       />
-      {currentAnswer.status === "completed" && currentAnswer.result ? (
-        <Alert severity="success">
-          Transcript saved · Band {currentAnswer.result.score.overall?.toFixed(1) ?? "N/A"}
-          {currentAnswer.result.is_mock_transcript ? " · Mock ASR active" : ""}
-        </Alert>
-      ) : null}
+      {currentAnswer.recording?.audioBlob ? <Alert severity="success">Recorded</Alert> : null}
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ justifyContent: "space-between" }}>
         <Button startIcon={<ArrowBackOutlinedIcon />} disabled={currentIndex === 0 || submitting || isRecording} onClick={handlePrevious}>Previous</Button>
         {currentIndex < sortedQuestions.length - 1 ? (
-          <Button variant="contained" endIcon={<ArrowForwardOutlinedIcon />} disabled={submitting || isRecording || !currentAnswer.recording?.audioBlob} onClick={handleNext}>
-            {submitting ? "Transcribing and scoring..." : "Next Question"}
+          <Button
+            variant="contained"
+            endIcon={<ArrowForwardOutlinedIcon />}
+            disabled={submitting || isRecording || !currentAnswer.recording?.audioBlob}
+            onClick={handleNext}
+          >
+            Next Question
           </Button>
         ) : (
-          <Button variant="contained" disabled={submitting || isRecording || !currentAnswer.recording?.audioBlob} onClick={handleFinish}>
-            {submitting ? "Generating Report..." : `Finish Test (${completed}/${sortedQuestions.length})`}
+          <Button variant="contained" disabled={submitting} onClick={handleFinish}>
+            {submitting ? "Transcribing and scoring your full speaking test..." : `Finish Test (${completed}/${sortedQuestions.length})`}
           </Button>
         )}
       </Stack>

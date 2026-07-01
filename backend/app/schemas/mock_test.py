@@ -75,6 +75,25 @@ class PartFeedback(BaseModel):
     question_analyses: list[QuestionAnalysis]
 
 
+class MockCriteriaScores(BaseModel):
+    fluency_coherence: float | None = None
+    lexical_resource: float | None = None
+    grammatical_range_accuracy: float | None = None
+    pronunciation: float | None = None
+
+
+class MockPartPerformance(BaseModel):
+    part1: str = ""
+    part2: str = ""
+    part3: str = ""
+
+
+class RepeatedError(BaseModel):
+    error_type: str
+    examples: list[str] = Field(default_factory=list)
+    suggestion: str = ""
+
+
 class MockTestReport(BaseModel):
     overall_band_score: float | None = None
     key_strengths: list[str] = Field(default_factory=list)
@@ -83,6 +102,14 @@ class MockTestReport(BaseModel):
     part1_feedback: PartFeedback
     part2_feedback: PartFeedback
     part3_feedback: PartFeedback
+
+    # Added for batch Full Mock scoring. Defaults keep previously persisted JSON compatible.
+    criteria_scores: MockCriteriaScores = Field(default_factory=MockCriteriaScores)
+    overall_feedback: str = ""
+    part_performance: MockPartPerformance = Field(default_factory=MockPartPerformance)
+    repeated_errors: list[RepeatedError] = Field(default_factory=list)
+    next_practice_focus: list[str] = Field(default_factory=list)
+
 
 class EvaluateMockTestRequest(BaseModel):
     answers: list[MockAnswer]
@@ -185,6 +212,48 @@ class StartMockTestResponse(CamelModel):
 
 class EvaluateMockTestResponse(BaseModel):
     mock_test_id: str
+    report: MockTestReport
+
+
+class FullMockSubmissionQuestion(BaseModel):
+    index: int = Field(ge=0)
+    question_id: str = Field(min_length=1, max_length=120)
+    question: MockQuestion
+    duration: float = Field(gt=0, le=181)
+    mime_type: str = Field(min_length=1, max_length=80)
+
+
+class FullMockSubmissionMetadata(BaseModel):
+    test_id: str | None = Field(default=None, max_length=120)
+    questions: list[FullMockSubmissionQuestion]
+
+    @model_validator(mode="after")
+    def validate_submission(self):
+        if [item.index for item in self.questions] != list(range(len(self.questions))):
+            raise ValueError("Question indexes must be continuous and ordered from zero.")
+        if len({item.question_id for item in self.questions}) != len(self.questions):
+            raise ValueError("Question ids must be unique.")
+        validate_question_set([item.question for item in self.questions])
+        return self
+
+
+class FullMockAnswerEvaluation(BaseModel):
+    part_type: PartType
+    question_index: int = Field(ge=1)
+    fluency_coherence: float = Field(ge=0, le=9)
+    lexical_resource: float = Field(ge=0, le=9)
+    grammatical_range_accuracy: float = Field(ge=0, le=9)
+    feedback: VoiceFeedback
+
+
+class FullMockLLMEvaluation(BaseModel):
+    answer_scores: list[FullMockAnswerEvaluation]
+    report: MockTestReport
+
+
+class SubmitFullMockTestResponse(BaseModel):
+    mock_test_id: str
+    answers: list[MockAnswer]
     report: MockTestReport
 
 

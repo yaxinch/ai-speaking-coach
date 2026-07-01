@@ -239,6 +239,27 @@ export interface MockTestReport {
   part1_feedback: PartFeedback;
   part2_feedback: PartFeedback;
   part3_feedback: PartFeedback;
+  criteria_scores: {
+    fluency_coherence: number | null;
+    lexical_resource: number | null;
+    grammatical_range_accuracy: number | null;
+    pronunciation: number | null;
+  };
+  overall_feedback: string;
+  part_performance: Record<PartType, string>;
+  repeated_errors: Array<{ error_type: string; examples: string[]; suggestion: string }>;
+  next_practice_focus: string[];
+}
+
+export interface SubmitFullMockTestPayload {
+  testId?: string;
+  questions: Array<{
+    questionId: string;
+    question: MockQuestion;
+    audioBlob: Blob;
+    duration: number;
+    mimeType?: string;
+  }>;
 }
 
 export interface MockTestSummary {

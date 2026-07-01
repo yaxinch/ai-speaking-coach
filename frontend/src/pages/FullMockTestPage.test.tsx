@@ -2,24 +2,20 @@ import { forwardRef, useImperativeHandle } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { MockQuestion, MockSession, MockTestReport, VoiceAnswerResult } from "../types/practice";
+import type { MockAnswer, MockQuestion, MockSession, MockTestReport } from "../types/practice";
 import { FullMockTestPage } from "./FullMockTestPage";
 
 const api = vi.hoisted(() => ({
   startMockTest: vi.fn(),
-  evaluateMockTest: vi.fn(),
-  submitVoiceAnswer: vi.fn(),
-  deletePendingAudio: vi.fn()
+  submitFullMockTest: vi.fn()
 }));
 
 vi.mock("../api/mockTests", () => ({
-  startMockTest: api.startMockTest,
-  evaluateMockTest: api.evaluateMockTest
+  startMockTest: api.startMockTest
 }));
 
 vi.mock("../api/speaking", () => ({
-  submitVoiceAnswer: api.submitVoiceAnswer,
-  deletePendingAudio: api.deletePendingAudio
+  submitFullMockTest: api.submitFullMockTest
 }));
 
 vi.mock("../hooks/useExaminerVoice", () => ({
@@ -91,27 +87,33 @@ const report: MockTestReport = {
   key_strengths: [],
   key_weaknesses: [],
   action_plan: [],
+  criteria_scores: { fluency_coherence: 7, lexical_resource: 7, grammatical_range_accuracy: 7, pronunciation: null },
+  overall_feedback: "",
+  part_performance: { part1: "", part2: "", part3: "" },
+  repeated_errors: [],
+  next_practice_focus: [],
   part1_feedback: { band_estimate: 7, summary: "", strengths: [], weaknesses: [], question_analyses: [] },
   part2_feedback: { band_estimate: 7, summary: "", strengths: [], weaknesses: [], question_analyses: [] },
   part3_feedback: { band_estimate: 7, summary: "", strengths: [], weaknesses: [], question_analyses: [] }
 };
 
-function voiceResult(sequence: number): VoiceAnswerResult {
+function scoredAnswer(question: MockQuestion, sequence: number): MockAnswer {
   return {
-    practice_id: null,
+    part_type: question.part_type,
+    question_index: question.question_index,
+    question,
+    answer_text: `Transcript ${sequence}`,
+    transcript_text: `Transcript ${sequence}`,
     audio_asset_id: `audio-${sequence}`,
     audio_url: `/api/speaking/audio/audio-${sequence}`,
-    transcript: `Transcript ${sequence}`,
-    asr_provider: "mock",
-    is_mock_transcript: true,
-    score: {
+    voice_score: {
       overall: 7,
       fluency_coherence: 7,
       lexical_resource: 7,
       grammatical_range_accuracy: 7,
       pronunciation: null
     },
-    feedback: {
+    voice_feedback: {
       summary: "Good",
       strengths: [],
       weaknesses: [],
@@ -126,10 +128,11 @@ function voiceResult(sequence: number): VoiceAnswerResult {
 describe("FullMockTestPage", () => {
   beforeEach(() => {
     api.startMockTest.mockReset().mockResolvedValue(session);
-    api.submitVoiceAnswer.mockReset();
-    questions.forEach((_, index) => api.submitVoiceAnswer.mockResolvedValueOnce(voiceResult(index + 1)));
-    api.evaluateMockTest.mockReset().mockResolvedValue({ mock_test_id: "mock-1", report });
-    api.deletePendingAudio.mockReset().mockResolvedValue(undefined);
+    api.submitFullMockTest.mockReset().mockResolvedValue({
+      mock_test_id: "mock-1",
+      answers: questions.map((item, index) => scoredAnswer(item, index + 1)),
+      report
+    });
   });
 
   it("shows the optional practice goal and sends it to the start endpoint", async () => {
@@ -141,7 +144,7 @@ describe("FullMockTestPage", () => {
     expect(api.startMockTest).toHaveBeenCalledWith("technology and environment");
   });
 
-  it("starts at 1/4, requires a recording, and preserves completed progress on Previous", async () => {
+  it("disables Next without a recording, does not show a warning, and preserves recorded state on Previous", async () => {
     const user = userEvent.setup();
     render(<FullMockTestPage onResult={vi.fn()} />);
     await user.click(screen.getByRole("button", { name: "Start Practice" }));
@@ -149,19 +152,24 @@ describe("FullMockTestPage", () => {
     expect(await screen.findByText("Part 1 1/6")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Next Question" })).toBeDisabled();
+    expect(screen.queryByText("Not recorded")).not.toBeInTheDocument();
+    expect(screen.queryByText("Please record your answer before moving to the next question.")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Record answer" }));
     await user.click(screen.getByRole("button", { name: "Next Question" }));
     expect(await screen.findByText("Part 1 2/6")).toBeInTheDocument();
+    expect(api.submitFullMockTest).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Record answer" }));
     await user.click(screen.getByRole("button", { name: "Next Question" }));
     expect(await screen.findByText("Part 1 3/6")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Previous" }));
     expect(await screen.findByText("Part 1 2/6")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Recorded answer" })).toBeInTheDocument();
+    expect(screen.getByText("Recorded")).toBeInTheDocument();
   });
 
-  it("submits the final report only after all eight answers are completed", async () => {
+  it("submits all eleven recordings once after Finish Test", async () => {
     const user = userEvent.setup();
     const onResult = vi.fn();
     render(<FullMockTestPage onResult={onResult} />);
@@ -174,12 +182,12 @@ describe("FullMockTestPage", () => {
         await user.click(screen.getByRole("button", { name: "Next Question" }));
         await screen.findByText(`${index + 2} of 11`);
       } else {
-        await user.click(screen.getByRole("button", { name: "Finish Test (10/11)" }));
+        await user.click(screen.getByRole("button", { name: /Finish Test/ }));
       }
     }
 
-    await waitFor(() => expect(api.evaluateMockTest).toHaveBeenCalledOnce());
-    expect(api.evaluateMockTest.mock.calls[0][0]).toHaveLength(11);
+    await waitFor(() => expect(api.submitFullMockTest).toHaveBeenCalledOnce());
+    expect(api.submitFullMockTest.mock.calls[0][0].questions).toHaveLength(11);
     expect(onResult).toHaveBeenCalledWith(expect.objectContaining({ mockTestId: "mock-1", report }));
   });
 });

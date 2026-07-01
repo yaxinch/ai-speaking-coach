@@ -1,4 +1,4 @@
-import { apiRequest } from "./client";
+import { apiEmptyRequest, apiRequest } from "./client";
 import type { MockAnswer, MockQuestion, MockSession, MockTestDetail, MockTestReport, MockTestSummary } from "../types/practice";
 
 export function generateMockTest(): Promise<{ questions: MockQuestion[] }> {
@@ -27,4 +27,8 @@ export function listMockTests(): Promise<MockTestSummary[]> {
 
 export function getMockTest(id: string): Promise<MockTestDetail> {
   return apiRequest(`/api/mock-tests/${id}`);
+}
+
+export function deleteMockTest(id: string): Promise<void> {
+  return apiEmptyRequest(`/api/mock-tests/${id}`, { method: "DELETE" });
 }

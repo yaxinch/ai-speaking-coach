@@ -52,6 +52,7 @@ export function PracticePage({
   const recorderRef = useRef<VoiceAnswerRecorderHandle>(null);
   const stopUserPlayback = useCallback(() => recorderRef.current?.stopPlayback(), []);
   const examinerVoice = useExaminerVoice(stopUserPlayback);
+  const currentVoiceState = questionId ? examinerVoice.voices[questionId] : undefined;
 
   function clearRecording() {
     if (recording?.audioUrl) URL.revokeObjectURL(recording.audioUrl);
@@ -154,7 +155,7 @@ export function PracticePage({
       {question && !loadingQuestion ? (
         <SpokenQuestionCard
           question={question}
-          voiceState={examinerVoice.voices[questionId]}
+          voiceState={currentVoiceState}
           onPlay={() => examinerVoice.play(questionId, question.question)}
           disabled={submitting || isRecording}
         />
@@ -165,7 +166,7 @@ export function PracticePage({
           value={recording}
           onChange={setRecording}
           maxDuration={maxDurations[partType]}
-          disabled={submitting}
+          disabled={submitting || !currentVoiceState?.hasPlayed || currentVoiceState.isPlaying}
           questionId={questionId}
           onRecordingStart={examinerVoice.stop}
           onPlaybackStart={examinerVoice.stop}

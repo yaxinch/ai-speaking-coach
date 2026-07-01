@@ -84,7 +84,7 @@ flowchart LR
 4. 后端将音频统一转换为 16 kHz、16-bit、单声道 PCM WAV。
 5. ASR Provider 返回 transcript，DeepSeek 对文本进行结构化评分；Pronunciation Provider 独立评估原始语音表现。
 6. 后端保存录音、transcript、文本反馈和发音诊断；Azure 不可用时只将发音维度降级为 N/A。
-7. 新版 Full Mock 从审核题库组成 6/1/4 共 11 题；每题先转写评分，全部完成后再生成一次全局报告。旧 4/1/3 接口继续兼容。
+7. 新版 Full Mock 从审核题库组成 6/1/4 共 11 题；考试中只在浏览器保存每题录音，Finish Test 后通过一次 multipart 请求统一转写、发音评估和整场评分。旧 4/1/3 接口继续兼容。
 
 ## 项目结构
 
@@ -188,6 +188,7 @@ Vite 会将前端的 `/api` 请求代理到 `http://127.0.0.1:8010`。
 | POST | `/api/feedback/evaluate` | 评估回答并保存记录 |
 | POST | `/api/speaking/tts` | 生成考官语音并返回 WAV |
 | POST | `/api/speaking/voice-answer` | 上传录音、转写并评分 |
+| POST | `/api/speaking/mock-test/submit` | 一次上传 Full Mock 全部录音并生成整场报告 |
 | GET | `/api/speaking/audio/{id}` | 播放持久化录音 |
 | DELETE | `/api/speaking/audio/{id}` | 删除未关联的重录音频 |
 | POST | `/api/mock-tests/generate` | 生成 4/1/3 Full Mock |
@@ -196,8 +197,10 @@ Vite 会将前端的 `/api` 请求代理到 `http://127.0.0.1:8010`。
 | POST | `/api/mock-tests/evaluate` | 生成并保存 Full Mock 总评 |
 | GET | `/api/practices` | 获取练习历史列表 |
 | GET | `/api/practices/{id}` | 获取单条练习详情 |
+| DELETE | `/api/practices/{id}` | 删除分项练习及关联录音 |
 | GET | `/api/mock-tests` | 获取 Full Mock 历史列表 |
 | GET | `/api/mock-tests/{id}` | 获取单条 Full Mock 报告 |
+| DELETE | `/api/mock-tests/{id}` | 删除 Full Mock 报告及关联录音 |
 
 ## 前端构建
 

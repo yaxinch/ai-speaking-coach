@@ -2,9 +2,11 @@ import asyncio
 import json
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.responses import FileResponse
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
+from starlette.datastructures import UploadFile as StarletteUploadFile
 
 from app.config import get_settings
 from app.database import get_db
@@ -17,7 +19,9 @@ from app.providers.pronunciation import PronunciationProvider
 from app.providers.tts import TTSProvider
 from app.schemas.agent import FeedbackResult, PartType
 from app.schemas.speaking import SpeakingMode, TTSRequest, VoiceAnswerResponse, VoiceQuestionPayload
+from app.schemas.mock_test import FullMockSubmissionMetadata, SubmitFullMockTestResponse
 from app.services.audio_asset_service import AudioAssetService, MIME_EXTENSIONS, normalize_mime_type
+from app.services.full_mock_submission_service import FullMockSubmissionService
 from app.services.practice_service import PracticeService
 from app.services.speaking_scoring_service import SpeakingScoringService
 
@@ -165,6 +169,45 @@ async def submit_voice_answer(
     finally:
         if normalized_path is not None:
             normalized_path.unlink(missing_ok=True)
+
+
+@router.post("/mock-test/submit", response_model=SubmitFullMockTestResponse)
+async def submit_full_mock_test(
+    request: Request,
+    metadata: str = Form(...),
+    db: Session = Depends(get_db),
+    asr: ASRProvider = Depends(get_asr_provider),
+    pronunciation: PronunciationProvider = Depends(get_pronunciation_provider),
+    llm: LLMProvider = Depends(get_llm_provider),
+) -> SubmitFullMockTestResponse:
+    try:
+        parsed = FullMockSubmissionMetadata.model_validate(json.loads(metadata))
+    except (json.JSONDecodeError, ValidationError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail="Invalid full mock test metadata.") from exc
+    for item in parsed.questions:
+        if item.duration > MAX_DURATIONS[item.question.part_type] + 1:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Recording duration for question {item.index + 1} exceeds {MAX_DURATIONS[item.question.part_type]} seconds.",
+            )
+
+    form = await request.form()
+    expected_keys = {f"audio_{item.index}" for item in parsed.questions}
+    received_keys = {key for key, _ in form.multi_items() if key.startswith("audio_")}
+    if received_keys != expected_keys:
+        raise HTTPException(status_code=400, detail="Audio files do not match the submitted question metadata.")
+    uploads: list[UploadFile] = []
+    for item in parsed.questions:
+        values = form.getlist(f"audio_{item.index}")
+        if len(values) != 1 or not isinstance(values[0], StarletteUploadFile):
+            raise HTTPException(status_code=400, detail=f"Missing audio file for question {item.index + 1}.")
+        uploads.append(values[0])
+    return await FullMockSubmissionService(
+        db,
+        asr=asr,
+        pronunciation=pronunciation,
+        llm=llm,
+    ).submit(parsed, uploads)
 
 
 @router.get("/audio/{audio_id}")

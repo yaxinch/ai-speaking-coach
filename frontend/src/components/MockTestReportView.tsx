@@ -157,6 +157,18 @@ function PartReport({ partType, feedback, answers }: { partType: PartType; feedb
                 </Box>
                 <PronunciationAssessmentView assessment={answer.voice_score.pronunciation_assessment} />
                 {answer.voice_feedback?.summary ? <Typography sx={{ mt: 2, lineHeight: 1.65 }}>{answer.voice_feedback.summary}</Typography> : null}
+                {answer.voice_feedback?.corrections.length ? (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="h3" sx={{ mb: 1 }}>Corrections</Typography>
+                    <ItemList items={answer.voice_feedback.corrections.map((item) => `${item.original} → ${item.corrected}: ${item.reason}`)} />
+                  </Box>
+                ) : null}
+                {answer.voice_feedback?.improved_answer ? (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="h3" sx={{ mb: 1 }}>Improved Answer</Typography>
+                    <Typography sx={{ whiteSpace: "pre-wrap", lineHeight: 1.65 }}>{answer.voice_feedback.improved_answer}</Typography>
+                  </Box>
+                ) : null}
               </Box>
             ) : null}
             {analysis ? (
@@ -213,6 +225,20 @@ export function MockTestReportView({ report, answers }: { report: MockTestReport
         <Box sx={{ borderTop: 1, borderBottom: 1, borderColor: "divider" }}>
           <Box sx={{ py: 3 }}>
             <BandBlock label="Overall band estimate" value={report.overall_band_score} />
+            {report.overall_feedback ? <Typography sx={{ mt: 2, maxWidth: 850, lineHeight: 1.65 }}>{report.overall_feedback}</Typography> : null}
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2, 1fr)", md: "repeat(4, 1fr)" }, gap: 1.5, mt: 2.5 }}>
+              {[
+                ["Fluency & Coherence", report.criteria_scores.fluency_coherence],
+                ["Lexical Resource", report.criteria_scores.lexical_resource],
+                ["Grammar", report.criteria_scores.grammatical_range_accuracy],
+                ["Pronunciation", report.criteria_scores.pronunciation]
+              ].map(([label, value]) => (
+                <Box key={String(label)} sx={{ p: 1.5, bgcolor: "action.hover", borderRadius: 1.5 }}>
+                  <Typography color="text.secondary" sx={{ fontSize: 12 }}>{label}</Typography>
+                  <Typography sx={{ mt: 0.5, fontSize: 22, fontWeight: 800 }}>{typeof value === "number" ? value.toFixed(1) : "N/A"}</Typography>
+                </Box>
+              ))}
+            </Box>
             {averageAzureScore !== null ? (
               <Typography sx={{ mt: 2, fontWeight: 700 }}>
                 Average Azure pronunciation score: {averageAzureScore.toFixed(1)}/100
@@ -228,8 +254,18 @@ export function MockTestReportView({ report, answers }: { report: MockTestReport
             />
           </Box>
           <Box sx={{ py: 3, borderTop: 1, borderColor: "divider" }}>
-            <Typography variant="h3" sx={{ mb: 1.25 }}>Action Plan</Typography>
-            <ItemList items={report.action_plan} />
+            <Typography variant="h3" sx={{ mb: 1.25 }}>Next Practice Focus</Typography>
+            <ItemList items={report.next_practice_focus.length ? report.next_practice_focus : report.action_plan} />
+          </Box>
+          {report.repeated_errors.length ? (
+            <Box sx={{ py: 3, borderTop: 1, borderColor: "divider" }}>
+              <Typography variant="h3" sx={{ mb: 1.25 }}>Repeated Errors</Typography>
+              <ItemList items={report.repeated_errors.map((item) => `${item.error_type}: ${item.examples.join("; ")} — ${item.suggestion}`)} />
+            </Box>
+          ) : null}
+          <Box sx={{ py: 3, borderTop: 1, borderColor: "divider" }}>
+            <Typography variant="h3" sx={{ mb: 1.25 }}>Part Performance</Typography>
+            <ItemList items={partTabs.map((item) => `${item.label}: ${report.part_performance[item.value] || feedbackByPart[item.value].summary}`)} />
           </Box>
         </Box>
       ) : (

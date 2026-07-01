@@ -1,4 +1,4 @@
-import { apiRequest } from "./client";
+import { apiEmptyRequest, apiRequest } from "./client";
 import type { PartType, PracticeDetail, PracticeSummary, SectionPracticeStart } from "../types/practice";
 
 export function startSectionPractice(part: PartType, practiceGoal: string): Promise<SectionPracticeStart> {
@@ -14,4 +14,8 @@ export function listPractices(): Promise<PracticeSummary[]> {
 
 export function getPractice(id: string): Promise<PracticeDetail> {
   return apiRequest<PracticeDetail>(`/api/practices/${id}`);
+}
+
+export function deletePractice(id: string): Promise<void> {
+  return apiEmptyRequest(`/api/practices/${id}`, { method: "DELETE" });
 }

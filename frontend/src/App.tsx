@@ -185,8 +185,8 @@ export function App({
                   display: "grid",
                   placeItems: "center",
                   borderRadius: 1.5,
-                  bgcolor: "#ffffff",
-                  color: "#00AEEF"
+                  bgcolor: "transparent",
+                  color: "#ffffff"
                 }}
               >
                 <MessageOutlinedIcon sx={{ fontSize: 20 }} />

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from app.agents.mock_test_agent import MockTestAgent
@@ -55,3 +55,10 @@ def get_mock_test(mock_test_id: str, db: Session = Depends(get_db)) -> MockTestD
     if record is None:
         raise HTTPException(status_code=404, detail="Mock test record not found.")
     return record
+
+
+@router.delete("/{mock_test_id}", status_code=204)
+def delete_mock_test(mock_test_id: str, db: Session = Depends(get_db)) -> Response:
+    if not MockTestService(db).delete_record(mock_test_id):
+        raise HTTPException(status_code=404, detail="Mock test record not found.")
+    return Response(status_code=204)

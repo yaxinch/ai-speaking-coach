@@ -87,6 +87,27 @@ class AudioAssetService:
         self.db.commit()
         return True
 
+    def delete_pending_many(self, asset_ids: list[str]) -> None:
+        for asset_id in list(dict.fromkeys(asset_ids)):
+            asset = self.get(asset_id)
+            if asset is None or asset.status != "pending":
+                continue
+            self.path_for(asset).unlink(missing_ok=True)
+            self.db.delete(asset)
+        self.db.commit()
+
+    def delete_for_owner(self, *, owner_type: str, owner_id: str, commit: bool = True) -> int:
+        assets = self.db.query(AudioAsset).filter(
+            AudioAsset.owner_type == owner_type,
+            AudioAsset.owner_id == owner_id,
+        ).all()
+        for asset in assets:
+            self.path_for(asset).unlink(missing_ok=True)
+            self.db.delete(asset)
+        if commit:
+            self.db.commit()
+        return len(assets)
+
     def attach(self, asset_ids: list[str], *, owner_type: str, owner_id: str) -> None:
         unique_ids = list(dict.fromkeys(asset_ids))
         assets = self.db.query(AudioAsset).filter(AudioAsset.id.in_(unique_ids)).all() if unique_ids else []

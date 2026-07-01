@@ -15,6 +15,7 @@ from app.schemas.mock_test import (
     validate_report_for_questions,
 )
 from app.services.mock_test_service import MockTestService
+from app.services.full_mock_submission_service import round_half_band
 
 
 def question(part_type: str, index: int) -> dict:
@@ -84,6 +85,10 @@ def report() -> MockTestReport:
 
 
 class MockTestSchemaTests(unittest.TestCase):
+    def test_band_rounding_uses_half_up(self):
+        self.assertEqual(round_half_band(6.74), 6.5)
+        self.assertEqual(round_half_band(6.75), 7.0)
+
     def test_accepts_exact_4_1_3_question_distribution(self):
         parsed = GenerateMockTestResponse.model_validate({"questions": questions()})
         self.assertEqual(len(parsed.questions), 8)

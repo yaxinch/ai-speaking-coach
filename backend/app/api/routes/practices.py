@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -39,3 +39,10 @@ def get_practice(practice_id: str, db: Session = Depends(get_db)) -> PracticeDet
     if record is None:
         raise HTTPException(status_code=404, detail="Practice record not found.")
     return record
+
+
+@router.delete("/{practice_id}", status_code=204)
+def delete_practice(practice_id: str, db: Session = Depends(get_db)) -> Response:
+    if not PracticeService(db).delete_record(practice_id):
+        raise HTTPException(status_code=404, detail="Practice record not found.")
+    return Response(status_code=204)

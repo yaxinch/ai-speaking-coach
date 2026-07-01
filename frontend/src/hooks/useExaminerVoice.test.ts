@@ -82,6 +82,23 @@ describe("useExaminerVoice", () => {
     await act(async () => result.current.play("q1", "Question"));
 
     expect(result.current.voices.q1.isPlaying).toBe(false);
+    expect(result.current.voices.q1.hasPlayed).toBe(false);
     expect(result.current.voices.q1.errorMessage).toBe("Failed to play examiner voice.");
+  });
+
+  it("marks a question as consumed after playback starts and never plays it twice", async () => {
+    vi.mocked(generateExaminerSpeech).mockResolvedValue(new Blob(["voice"]));
+    const { result } = renderHook(() => useExaminerVoice());
+
+    await act(async () => result.current.play("q1", "Question"));
+    expect(result.current.voices.q1.hasPlayed).toBe(true);
+    expect(result.current.voices.q1.isPlaying).toBe(true);
+
+    act(() => TestAudio.instances[0].onended?.());
+    expect(result.current.voices.q1.isPlaying).toBe(false);
+
+    await act(async () => result.current.play("q1", "Question"));
+    expect(generateExaminerSpeech).toHaveBeenCalledTimes(1);
+    expect(TestAudio.instances).toHaveLength(1);
   });
 });

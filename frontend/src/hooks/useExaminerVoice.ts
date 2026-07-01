@@ -6,6 +6,7 @@ export interface ExaminerVoiceState {
   audioUrl?: string;
   isLoading: boolean;
   isPlaying: boolean;
+  hasPlayed: boolean;
   errorMessage?: string;
 }
 
@@ -14,6 +15,8 @@ export function useExaminerVoice(onBeforePlay?: () => void) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const urlsRef = useRef<Record<string, string>>({});
   const inFlightRef = useRef<Set<string>>(new Set());
+  const playbackLockedRef = useRef<Set<string>>(new Set());
+  const playedRef = useRef<Set<string>>(new Set());
   const requestVersionRef = useRef(0);
 
   const stop = useCallback(() => {
@@ -27,14 +30,14 @@ export function useExaminerVoice(onBeforePlay?: () => void) {
   }, []);
 
   const play = useCallback(async (questionId: string, text: string) => {
-    if (inFlightRef.current.has(questionId)) return;
+    if (inFlightRef.current.has(questionId) || playbackLockedRef.current.has(questionId) || playedRef.current.has(questionId)) return;
     stop();
     const requestVersion = requestVersionRef.current;
     onBeforePlay?.();
     let audioUrl = urlsRef.current[questionId];
     if (!audioUrl) {
       inFlightRef.current.add(questionId);
-      setVoices((current) => ({ ...current, [questionId]: { questionId, isLoading: true, isPlaying: false } }));
+      setVoices((current) => ({ ...current, [questionId]: { questionId, isLoading: true, isPlaying: false, hasPlayed: false } }));
       try {
         const blob = await generateExaminerSpeech({ question_id: questionId, text, voice: "Kore", accent: "british", speed: 0.95 });
         audioUrl = URL.createObjectURL(blob);
@@ -45,7 +48,7 @@ export function useExaminerVoice(onBeforePlay?: () => void) {
         urlsRef.current[questionId] = audioUrl;
       } catch (error) {
         if (requestVersion !== requestVersionRef.current) return;
-        setVoices((current) => ({ ...current, [questionId]: { questionId, isLoading: false, isPlaying: false, errorMessage: error instanceof Error ? error.message : "Failed to generate examiner voice. Please try again." } }));
+        setVoices((current) => ({ ...current, [questionId]: { questionId, isLoading: false, isPlaying: false, hasPlayed: false, errorMessage: error instanceof Error ? error.message : "Failed to generate examiner voice. Please try again." } }));
         return;
       } finally {
         inFlightRef.current.delete(questionId);
@@ -54,13 +57,17 @@ export function useExaminerVoice(onBeforePlay?: () => void) {
     if (requestVersion !== requestVersionRef.current) return;
     const audio = new Audio(audioUrl);
     audioRef.current = audio;
-    audio.onended = () => setVoices((current) => ({ ...current, [questionId]: { ...(current[questionId] ?? { questionId }), audioUrl, isLoading: false, isPlaying: false } }));
-    audio.onerror = () => setVoices((current) => ({ ...current, [questionId]: { ...(current[questionId] ?? { questionId }), audioUrl, isLoading: false, isPlaying: false, errorMessage: "This audio format is not supported by your browser." } }));
-    setVoices((current) => ({ ...current, [questionId]: { questionId, audioUrl, isLoading: false, isPlaying: true } }));
+    playbackLockedRef.current.add(questionId);
+    audio.onended = () => setVoices((current) => ({ ...current, [questionId]: { ...(current[questionId] ?? { questionId, hasPlayed: true }), audioUrl, isLoading: false, isPlaying: false, hasPlayed: true } }));
+    audio.onerror = () => setVoices((current) => ({ ...current, [questionId]: { ...(current[questionId] ?? { questionId, hasPlayed: true }), audioUrl, isLoading: false, isPlaying: false, hasPlayed: true, errorMessage: "This audio format is not supported by your browser." } }));
+    setVoices((current) => ({ ...current, [questionId]: { questionId, audioUrl, isLoading: false, isPlaying: true, hasPlayed: false } }));
     try {
       await audio.play();
+      playedRef.current.add(questionId);
+      setVoices((current) => ({ ...current, [questionId]: { ...(current[questionId] ?? { questionId }), audioUrl, isLoading: false, isPlaying: true, hasPlayed: true } }));
     } catch {
-      setVoices((current) => ({ ...current, [questionId]: { questionId, audioUrl, isLoading: false, isPlaying: false, errorMessage: "Failed to play examiner voice." } }));
+      playbackLockedRef.current.delete(questionId);
+      setVoices((current) => ({ ...current, [questionId]: { questionId, audioUrl, isLoading: false, isPlaying: false, hasPlayed: false, errorMessage: "Failed to play examiner voice." } }));
     }
   }, [onBeforePlay, stop]);
 
@@ -69,6 +76,8 @@ export function useExaminerVoice(onBeforePlay?: () => void) {
     const url = urlsRef.current[questionId];
     if (url) URL.revokeObjectURL(url);
     delete urlsRef.current[questionId];
+    playbackLockedRef.current.delete(questionId);
+    playedRef.current.delete(questionId);
     setVoices((current) => {
       const next = { ...current };
       delete next[questionId];

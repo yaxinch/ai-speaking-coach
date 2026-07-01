@@ -1,4 +1,4 @@
-import { Box, ButtonBase, Chip, Stack, Typography } from "@mui/material";
+import { Box, ButtonBase, Checkbox, Chip, Stack, Typography } from "@mui/material";
 import type { HistoryEntry, PracticeMode } from "../types/practice";
 
 const partLabel = {
@@ -7,12 +7,22 @@ const partLabel = {
   part3: "Part 3"
 };
 
+export function historyEntryKey(record: HistoryEntry): string {
+  return `${record.mode}:${record.id}`;
+}
+
 export function HistoryList({
   records,
-  onOpen
+  onOpen,
+  selectionMode = false,
+  selectedKeys = new Set<string>(),
+  onToggle
 }: {
   records: HistoryEntry[];
   onOpen: (mode: PracticeMode, practiceId: string) => void;
+  selectionMode?: boolean;
+  selectedKeys?: Set<string>;
+  onToggle?: (record: HistoryEntry) => void;
 }) {
   if (!records.length) {
     return <Typography color="text.secondary">No practice records yet.</Typography>;
@@ -20,33 +30,40 @@ export function HistoryList({
 
   return (
     <Stack spacing={1.25}>
-      {records.map((record) => (
-        <ButtonBase
-          key={record.id}
-          onClick={() => onOpen(record.mode, record.id)}
-          sx={{
-            width: "100%",
-            display: "block",
-            textAlign: "left",
-            border: 1,
-            borderColor: "divider",
-            borderRadius: 2,
-            bgcolor: "background.paper",
-            p: 2,
-            "&:hover": {
-              borderColor: "primary.main",
-              bgcolor: "action.hover"
-            }
-          }}
-        >
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: { xs: "1fr", md: "190px 150px minmax(0, 1fr) 70px" },
-              gap: 1.75,
-              alignItems: "center"
-            }}
-          >
+      {records.map((record) => {
+        const key = historyEntryKey(record);
+        const selected = selectedKeys.has(key);
+        return (
+          <Stack key={key} direction="row" spacing={1} sx={{ alignItems: "center" }}>
+            {selectionMode ? (
+              <Checkbox
+                checked={selected}
+                onChange={() => onToggle?.(record)}
+                slotProps={{ input: { "aria-label": `Select ${record.mode === "full_mock" ? "full mock test" : "targeted practice"}` } }}
+              />
+            ) : null}
+            <ButtonBase
+              onClick={() => selectionMode ? onToggle?.(record) : onOpen(record.mode, record.id)}
+              sx={{
+                flex: 1,
+                display: "block",
+                textAlign: "left",
+                border: 1,
+                borderColor: selected ? "primary.main" : "divider",
+                borderRadius: 2,
+                bgcolor: "background.paper",
+                p: 2,
+                "&:hover": { borderColor: "primary.main", bgcolor: "action.hover" }
+              }}
+            >
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: { xs: "1fr", md: "190px 150px minmax(0, 1fr) 70px" },
+                  gap: 1.75,
+                  alignItems: "center"
+                }}
+              >
             <Typography color="text.secondary" sx={{ fontSize: 13 }}>
               {new Date(record.created_at).toLocaleString()}
             </Typography>
@@ -65,9 +82,11 @@ export function HistoryList({
             >
               {record.overall_band === null ? "N/A" : record.overall_band.toFixed(1)}
             </Typography>
-          </Box>
-        </ButtonBase>
-      ))}
+              </Box>
+            </ButtonBase>
+          </Stack>
+        );
+      })}
     </Stack>
   );
 }

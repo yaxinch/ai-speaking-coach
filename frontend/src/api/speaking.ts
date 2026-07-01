@@ -1,5 +1,9 @@
 import { apiBlobRequest, apiEmptyRequest, apiRequest } from "./client";
-import type { ExaminerQuestion, FeedbackResult, PartType, VoiceAnswerResult, VoiceAnswerValue } from "../types/practice";
+import type { ExaminerQuestion, FeedbackResult, MockAnswer, MockTestReport, PartType, SubmitFullMockTestPayload, VoiceAnswerResult, VoiceAnswerValue } from "../types/practice";
+
+function extensionForMime(mimeType: string): string {
+  return mimeType.includes("wav") ? "wav" : mimeType.includes("mp4") ? "m4a" : mimeType.includes("mpeg") ? "mp3" : mimeType.includes("ogg") ? "ogg" : "webm";
+}
 
 export interface GenerateExaminerSpeechPayload {
   question_id: string;
@@ -22,7 +26,7 @@ export async function submitVoiceAnswer(payload: {
 }): Promise<VoiceAnswerResult> {
   if (!payload.recording.audioBlob) throw new Error("Please record your answer first.");
   const mimeType = payload.recording.mimeType || payload.recording.audioBlob.type || "audio/webm";
-  const extension = mimeType.includes("wav") ? "wav" : mimeType.includes("mp4") ? "m4a" : mimeType.includes("mpeg") ? "mp3" : mimeType.includes("ogg") ? "ogg" : "webm";
+  const extension = extensionForMime(mimeType);
   const form = new FormData();
   form.append("audio", new File([payload.recording.audioBlob], `${payload.questionId}.${extension}`, { type: mimeType }));
   form.append("mode", payload.mode);
@@ -33,6 +37,30 @@ export async function submitVoiceAnswer(payload: {
   form.append("duration", String(payload.recording.duration ?? 0));
   form.append("mime_type", mimeType);
   return apiRequest<VoiceAnswerResult>("/api/speaking/voice-answer", { method: "POST", body: form });
+}
+
+export async function submitFullMockTest(
+  payload: SubmitFullMockTestPayload
+): Promise<{ mock_test_id: string; answers: MockAnswer[]; report: MockTestReport }> {
+  const form = new FormData();
+  form.append("metadata", JSON.stringify({
+    test_id: payload.testId,
+    questions: payload.questions.map((item, index) => ({
+      index,
+      question_id: item.questionId,
+      question: item.question,
+      duration: item.duration,
+      mime_type: item.mimeType || item.audioBlob.type || "audio/webm"
+    }))
+  }));
+  payload.questions.forEach((item, index) => {
+    const mimeType = item.mimeType || item.audioBlob.type || "audio/webm";
+    form.append(
+      `audio_${index}`,
+      new File([item.audioBlob], `${item.questionId}.${extensionForMime(mimeType)}`, { type: mimeType })
+    );
+  });
+  return apiRequest("/api/speaking/mock-test/submit", { method: "POST", body: form });
 }
 
 export function deletePendingAudio(audioAssetId: string): Promise<void> {
