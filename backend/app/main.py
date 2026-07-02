@@ -1,7 +1,10 @@
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+from pathlib import Path
+
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.api.routes import auth, examiner, feedback, mock_tests, practices, speaking
@@ -55,3 +58,23 @@ app.include_router(feedback.router, prefix="/api/feedback", tags=["feedback"], d
 app.include_router(practices.router, prefix="/api/practices", tags=["practices"], dependencies=protected)
 app.include_router(mock_tests.router, prefix="/api/mock-tests", tags=["mock-tests"], dependencies=protected)
 app.include_router(speaking.router, prefix="/api/speaking", tags=["speaking"], dependencies=protected)
+
+
+def frontend_file(full_path: str, dist_dir: Path) -> Path:
+    """Resolve a frontend asset or fall back to index.html without escaping dist_dir."""
+    if full_path == "api" or full_path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="Not Found")
+    candidate = (dist_dir / full_path).resolve()
+    if candidate != dist_dir and dist_dir not in candidate.parents:
+        raise HTTPException(status_code=404, detail="Not Found")
+    if candidate.is_file():
+        return candidate
+    index = dist_dir / "index.html"
+    if index.is_file():
+        return index
+    raise HTTPException(status_code=404, detail="Frontend build is not available.")
+
+
+@app.get("/{full_path:path}", include_in_schema=False)
+def serve_frontend(full_path: str) -> FileResponse:
+    return FileResponse(frontend_file(full_path, settings.frontend_dist_path))

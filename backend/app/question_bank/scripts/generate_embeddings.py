@@ -15,25 +15,32 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
-    args = parse_args()
-    if args.batch_size < 1:
+def generate_embeddings(
+    *,
+    batch_size: int = 50,
+    limit: int | None = None,
+    part: str | None = None,
+    force: bool = False,
+    embedding: EmbeddingService | None = None,
+    session_factory=SessionLocal,
+) -> tuple[int, int]:
+    if batch_size < 1:
         raise SystemExit("--batch-size must be positive")
-    embedding = EmbeddingService(get_settings())
-    with SessionLocal() as db:
+    embedding = embedding or EmbeddingService(get_settings())
+    with session_factory() as db:
         repository = QuestionRepository(db)
-        rows = repository.approved(part=args.part)
+        rows = repository.approved(part=part)
         pending = []
         for row in rows:
             text = row.embedding_text or row.question
             fingerprint = vector_fingerprint(embedding.model, text)
-            if args.force or row.embedding_vector is None or row.embedding_vector_id != fingerprint:
+            if force or row.embedding_vector is None or row.embedding_vector_id != fingerprint:
                 pending.append((row, text, fingerprint))
-        if args.limit is not None:
-            pending = pending[: args.limit]
+        if limit is not None:
+            pending = pending[:limit]
         processed = 0
-        for start in range(0, len(pending), args.batch_size):
-            batch = pending[start : start + args.batch_size]
+        for start in range(0, len(pending), batch_size):
+            batch = pending[start : start + batch_size]
             try:
                 vectors = embedding.embed_documents([text for _, text, _ in batch])
             except EmbeddingUnavailable as exc:
@@ -50,7 +57,19 @@ def main() -> None:
             db.commit()
             processed += len(batch)
             print(f"Embedded {processed}/{len(pending)} approved questions.")
-        print(f"Embedding generation complete: updated={processed}, skipped={len(rows) - len(pending)}")
+        skipped = len(rows) - len(pending)
+        print(f"Embedding generation complete: updated={processed}, skipped={skipped}")
+        return processed, skipped
+
+
+def main() -> None:
+    args = parse_args()
+    generate_embeddings(
+        batch_size=args.batch_size,
+        limit=args.limit,
+        part=args.part,
+        force=args.force,
+    )
 
 
 if __name__ == "__main__":

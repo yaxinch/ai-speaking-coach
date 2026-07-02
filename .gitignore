@@ -13,6 +13,7 @@ __pycache__/
 backend/data/app.db
 backend/data/.gitkeep
 backend/data/audio/
+*.db
 backend/data/question_bank/html_cache/
 backend/data/question_bank/raw/
 backend/data/question_bank/cleaned/
@@ -21,8 +22,12 @@ backend/data/question_bank/sources/question_sources.local.json
 database/*.db
 *.sqlite
 *.sqlite3
+uploads/
+recordings/
+*.log
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
+build/
 *.tsbuildinfo
 .DS_Store

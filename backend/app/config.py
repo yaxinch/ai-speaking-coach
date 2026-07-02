@@ -20,7 +20,11 @@ class Settings(BaseSettings):
     deepseek_base_url: str = "https://api.deepseek.com"
     deepseek_model: str = "deepseek-chat"
     database_url: str = "sqlite:///./data/app.db"
-    cors_origins: str = "http://127.0.0.1:5180,http://localhost:5180"
+    cors_origins: str = (
+        "http://127.0.0.1:5180,http://localhost:5180,"
+        "http://127.0.0.1:5173,http://localhost:5173,"
+        "http://127.0.0.1:3000,http://localhost:3000"
+    )
     tts_provider: str = "mock"
     gemini_api_key: str = ""
     gemini_tts_model: str = "gemini-3.1-flash-tts-preview"
@@ -39,6 +43,7 @@ class Settings(BaseSettings):
     audio_storage_dir: str = "./data/audio"
     max_audio_upload_bytes: int = 25 * 1024 * 1024
     audio_pending_ttl_hours: int = 24
+    frontend_dist_dir: str = str(PROJECT_ROOT / "frontend" / "dist")
 
     model_config = SettingsConfigDict(
         env_file=(PROJECT_ROOT / ".env", BACKEND_ROOT / ".env"),
@@ -56,6 +61,10 @@ class Settings(BaseSettings):
     @property
     def session_cookie_secure(self) -> bool:
         return self.app_env == "production"
+
+    @property
+    def frontend_dist_path(self) -> Path:
+        return Path(self.frontend_dist_dir).resolve()
 
     def require_session_secret(self) -> str:
         secret = self.session_secret_key.strip()

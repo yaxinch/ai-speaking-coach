@@ -1,0 +1,42 @@
+services:
+  - type: web
+    name: ai-speaking-coach
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    healthCheckPath: /api/health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        value: sqlite:////var/data/app.db
+      - key: AUDIO_STORAGE_DIR
+        value: /var/data/audio
+      - key: FRONTEND_DIST_DIR
+        value: /app/frontend/dist
+      - key: CORS_ORIGINS
+        sync: false
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD_HASH
+        sync: false
+      - key: SESSION_SECRET_KEY
+        generateValue: true
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: TTS_PROVIDER
+        value: gemini
+      - key: ASR_PROVIDER
+        value: gemini
+      - key: PRONUNCIATION_PROVIDER
+        value: azure
+      - key: AZURE_SPEECH_KEY
+        sync: false
+      - key: AZURE_SPEECH_REGION
+        sync: false
+    disk:
+      name: speaking-coach-data
+      mountPath: /var/data
+      sizeGB: 1
