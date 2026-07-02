@@ -4,9 +4,9 @@ AI Speaking Coach 是一个面向 IELTS Speaking 的 AI 语音练习与评分 We
 
 当前版本支持题库驱动的分项练习、11 题 Full Mock、考官语音、浏览器录音、ASR、发音评估、结构化评分和历史回放。线上版本采用单管理员私有演示模式，避免公开消耗项目所有者的 LLM 与 Speech API 配额。
 
-> 线上应用：[https://ai-speaking-coach.onrender.com](https://ai-speaking-coach.onrender.com)
+> 线上应用：[https://ai-speaking-coach-2fxn.onrender.com](https://ai-speaking-coach-2fxn.onrender.com)
 >
-> 健康检查：[https://ai-speaking-coach.onrender.com/api/health](https://ai-speaking-coach.onrender.com/api/health)
+> 健康检查：[https://ai-speaking-coach-2fxn.onrender.com/api/health](https://ai-speaking-coach-2fxn.onrender.com/api/health)
 >
 > 线上版本采用单管理员私有演示模式，无公开注册；使用应用功能需要管理员账号。
 
@@ -44,7 +44,7 @@ API Key 和管理员 Secret 只允许存在于后端环境变量。不要使用 
 
    | 变量 | 用途 |
    | --- | --- |
-   | `CORS_ORIGINS` | 当前服务填写 `https://ai-speaking-coach.onrender.com`；自定义域名后同步更新为实际 HTTPS 地址 |
+   | `CORS_ORIGINS` | 当前服务填写 `https://ai-speaking-coach-2fxn.onrender.com`；自定义域名后同步更新为实际 HTTPS 地址 |
    | `ADMIN_USERNAME` | 私有演示管理员用户名 |
    | `ADMIN_PASSWORD_HASH` | `scripts/generate_password_hash.py` 生成的 bcrypt hash |
    | `DEEPSEEK_API_KEY` | 组卷选择与文本评分 |
@@ -212,8 +212,6 @@ ai-speaking-coach/
 
 ## 本地运行
 
-本节中的 `127.0.0.1` 和 `localhost` 仅用于本地开发。直接使用线上版本请访问 [Render 线上应用](https://ai-speaking-coach.onrender.com)。
-
 ### 1. 启动后端
 
 在项目根目录执行：
@@ -235,7 +233,6 @@ DEEPSEEK_API_KEY=your_api_key_here
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 DEEPSEEK_MODEL=deepseek-chat
 DATABASE_URL=sqlite:///./data/app.db
-CORS_ORIGINS=http://127.0.0.1:5180,http://localhost:5180
 TTS_PROVIDER=mock
 ASR_PROVIDER=mock
 GEMINI_ASR_MODEL=gemini-2.5-flash
@@ -262,10 +259,10 @@ AZURE_PRONUNCIATION_TIMEOUT_SECONDS=330
 启动 FastAPI：
 
 ```powershell
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8010
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8010
 ```
 
-健康检查地址：<http://127.0.0.1:8010/api/health>
+启动后可通过 `/api/health` 检查后端状态。
 
 ### 2. 启动前端
 
@@ -277,9 +274,7 @@ npm install
 npm run dev
 ```
 
-浏览器访问：<http://127.0.0.1:5180>
-
-Vite 会将前端的 `/api` 请求代理到 `http://127.0.0.1:8010`。
+Vite 开发服务器会将前端的 `/api` 请求代理到本地后端。
 
 ## API 接口
 
@@ -362,17 +357,9 @@ python -m app.question_bank.scripts.generate_embeddings --batch-size 50
 
 先执行 `alembic upgrade head`，导入 approved 题目，再运行 `generate_embeddings`。命令使用后端 `GEMINI_API_KEY`、`gemini-embedding-001` 和 768 维向量；向量以 float32 BLOB 保存到 SQLite。未变化的题目会按模型和 `embedding_text` 指纹跳过，可用 `--limit` 小规模验证或用 `--force` 重建。
 
-启动一套默认题库组卷：
+启动一套默认题库组卷：调用 `POST /api/mock-tests/start`，请求体为 `{"practiceGoal":""}`。
 
-```powershell
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8010/api/mock-tests/start -ContentType application/json -Body '{"practiceGoal":""}'
-```
-
-启动目标检索组卷：
-
-```powershell
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8010/api/mock-tests/start -ContentType application/json -Body '{"practiceGoal":"technology and environment"}'
-```
+启动目标检索组卷：调用 `POST /api/mock-tests/start`，请求体为 `{"practiceGoal":"technology and environment"}`。
 
 空目标使用纯规则组卷。非空目标分别检索 Part 1/2/3 候选，再由 DeepSeek 仅返回候选 ID；后端校验并回填原题。LLM 输出无效时使用检索候选规则组卷；embedding 未配置或索引缺失时返回默认题库组卷，并在 metadata 中明确标记 fallback。所有用户可见题目仅来自 `status=approved` 的 practice question bank。
 
@@ -380,9 +367,7 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8010/api/mock-tests/start -
 
 分项练习每次只返回一道当前 Part 的题目；Part 2 返回完整 cue card。空目标直接从 approved 题库随机选择，不调用 embedding 或 LLM；非空目标只检索所选 Part，并让 DeepSeek 返回一个候选 ID。LLM 输出无效时使用相似度最高的候选，embedding 不可用时降级为当前 Part 的随机 approved 题。
 
-```powershell
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8010/api/practices/section/start -ContentType application/json -Body '{"part":"part1","practiceGoal":"technology"}'
-```
+调用 `POST /api/practices/section/start`，例如请求体 `{"part":"part1","practiceGoal":"technology"}`。
 
 `sources/question_sources.json` 和 example 配置默认不启用来源。本地配置只用于小规模验证；启用前必须人工确认页面公开可访问、无需登录或付费、适合自动解析，并检查网站条款。运行时仍会读取 robots.txt；无法可靠确认许可、出现验证码、Cloudflare 挑战、登录、付费墙或非 HTML 内容时会停止该 URL，并要求改用人工 CSV/JSON 导入。IELTS.org PDF 第一版不自动解析。产品和文档只能称其为 IELTS Speaking practice question bank，不得宣称“官方真题库”。
 
