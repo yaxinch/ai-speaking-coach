@@ -215,46 +215,52 @@ class EvaluateMockTestResponse(BaseModel):
     report: MockTestReport
 
 
-class FullMockSubmissionQuestion(BaseModel):
-    index: int = Field(ge=0)
-    question_id: str = Field(min_length=1, max_length=120)
-    question: MockQuestion
-    duration: float = Field(gt=0, le=181)
-    mime_type: str = Field(min_length=1, max_length=80)
-
-
-class FullMockSubmissionMetadata(BaseModel):
-    test_id: str | None = Field(default=None, max_length=120)
-    questions: list[FullMockSubmissionQuestion]
-
-    @model_validator(mode="after")
-    def validate_submission(self):
-        if [item.index for item in self.questions] != list(range(len(self.questions))):
-            raise ValueError("Question indexes must be continuous and ordered from zero.")
-        if len({item.question_id for item in self.questions}) != len(self.questions):
-            raise ValueError("Question ids must be unique.")
-        validate_question_set([item.question for item in self.questions])
-        return self
-
-
-class FullMockAnswerEvaluation(BaseModel):
-    part_type: PartType
-    question_index: int = Field(ge=1)
-    fluency_coherence: float = Field(ge=0, le=9)
-    lexical_resource: float = Field(ge=0, le=9)
-    grammatical_range_accuracy: float = Field(ge=0, le=9)
-    feedback: VoiceFeedback
-
-
-class FullMockLLMEvaluation(BaseModel):
-    answer_scores: list[FullMockAnswerEvaluation]
-    report: MockTestReport
-
-
 class SubmitFullMockTestResponse(BaseModel):
     mock_test_id: str
     answers: list[MockAnswer]
     report: MockTestReport
+
+
+class FinalizeFullMockTestRequest(EvaluateMockTestRequest):
+    test_id: str = Field(min_length=1, max_length=120)
+
+    @model_validator(mode="after")
+    def validate_scored_answers(self):
+        expected_order = sorted(
+            self.answers,
+            key=lambda answer: ({"part1": 1, "part2": 2, "part3": 3}[answer.part_type], answer.question_index),
+        )
+        if self.answers != expected_order:
+            raise ValueError("Full mock answers must use the original question order.")
+        asset_ids: list[str] = []
+        for answer in self.answers:
+            score = answer.voice_score
+            if (
+                score is None
+                or score.overall is None
+                or score.fluency_coherence is None
+                or score.lexical_resource is None
+                or score.grammatical_range_accuracy is None
+                or answer.voice_feedback is None
+                or not answer.audio_asset_id
+                or answer.transcript_text != answer.answer_text
+            ):
+                raise ValueError("Every full mock answer must contain a complete server score and audio reference.")
+            numeric_scores = [
+                score.overall,
+                score.fluency_coherence,
+                score.lexical_resource,
+                score.grammatical_range_accuracy,
+                score.pronunciation,
+            ]
+            if any(value is not None and not 0 <= value <= 9 for value in numeric_scores):
+                raise ValueError("Full mock answer scores must be valid IELTS bands.")
+            if answer.audio_url != f"/api/speaking/audio/{answer.audio_asset_id}":
+                raise ValueError("Full mock answer audio metadata is invalid.")
+            asset_ids.append(answer.audio_asset_id)
+        if len(set(asset_ids)) != len(asset_ids):
+            raise ValueError("Full mock answer audio references must be unique.")
+        return self
 
 
 class MockTestSummary(BaseModel):

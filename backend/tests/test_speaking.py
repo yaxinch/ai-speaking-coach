@@ -27,6 +27,7 @@ from tests.test_mock_test import questions, report
 
 class FakeScoringLLM:
     full_mock_calls = 0
+    answer_calls = 0
 
     async def chat(self, messages, temperature=0.7):
         if "as one coherent performance" in messages[-1]["content"]:
@@ -56,6 +57,7 @@ class FakeScoringLLM:
             )
         if "Evaluate this complete text-based IELTS Speaking mock test" in messages[-1]["content"]:
             return report().model_dump_json()
+        type(self).answer_calls += 1
         return json.dumps(
             {
                 "overall_band_score": 6.5,
@@ -103,6 +105,7 @@ class SpeakingApiTests(unittest.TestCase):
         self.client = TestClient(app)
         login(self.client)
         FakeScoringLLM.full_mock_calls = 0
+        FakeScoringLLM.answer_calls = 0
 
     def tearDown(self):
         self.client.close()
@@ -265,37 +268,54 @@ class SpeakingApiTests(unittest.TestCase):
             self.assertEqual(len(assets), 8)
             self.assertTrue(all(asset.status == "attached" and asset.owner_id == mock_test_id for asset in assets))
 
-    def test_batch_full_mock_submission_scores_once_persists_and_deletes_audio(self):
-        metadata = {
-            "test_id": "session-1",
-            "questions": [
-                {
-                    "index": index,
-                    "question_id": f"session-1-{item['part_type']}-{item['question_index']}",
-                    "question": item,
-                    "duration": 1,
-                    "mime_type": "audio/wav",
-                }
-                for index, item in enumerate(questions())
-            ],
-        }
+    def score_mock_answer(self, item, *, test_id="session-1", old_audio_asset_id=None):
         wav_audio = pcm_to_wav(b"\x00\x00" * 16000, sample_rate=16000)
-        files = [
-            (f"audio_{index}", (f"answer-{index}.wav", wav_audio, "audio/wav"))
-            for index in range(len(questions()))
-        ]
+        question_id = f"mock-{test_id}-{item['part_type']}-{item['question_index']}"
+        data = {
+            "test_id": test_id,
+            "question_id": question_id,
+            "question_payload": json.dumps(item),
+            "duration": "1",
+            "mime_type": "audio/wav",
+        }
+        if old_audio_asset_id:
+            data["old_audio_asset_id"] = old_audio_asset_id
+        return self.client.post(
+            "/api/speaking/mock-test/answer",
+            data=data,
+            files={"audio": ("answer.wav", wav_audio, "audio/wav")},
+        )
+
+    def test_full_mock_scores_each_answer_then_finalizes_locally_and_idempotently(self):
+        scored_answers = []
+        for item in questions():
+            response = self.score_mock_answer(item)
+            self.assertEqual(response.status_code, 200, response.text)
+            scored_answers.append(response.json())
+
+        self.assertEqual(FakeScoringLLM.full_mock_calls, 0)
+        self.assertEqual(FakeScoringLLM.answer_calls, len(questions()))
+        self.assertEqual(scored_answers[0]["voice_score"]["overall"], 6.5)
         response = self.client.post(
-            "/api/speaking/mock-test/submit",
-            data={"metadata": json.dumps(metadata)},
-            files=files,
+            "/api/speaking/mock-test/finalize",
+            json={"test_id": "session-1", "answers": scored_answers},
         )
         self.assertEqual(response.status_code, 200, response.text)
         body = response.json()
-        self.assertEqual(FakeScoringLLM.full_mock_calls, 1)
         self.assertEqual(len(body["answers"]), 8)
-        self.assertEqual(body["answers"][0]["voice_score"]["overall"], 6.5)
         self.assertEqual(body["report"]["criteria_scores"]["pronunciation"], 7.0)
+        self.assertEqual(body["report"]["overall_band_score"], 6.5)
+        self.assertIn("locally aggregated", body["report"]["overall_feedback"])
         mock_test_id = body["mock_test_id"]
+
+        retried = self.client.post(
+            "/api/speaking/mock-test/finalize",
+            json={"test_id": "session-1", "answers": scored_answers},
+        )
+        self.assertEqual(retried.status_code, 200, retried.text)
+        self.assertEqual(retried.json()["mock_test_id"], mock_test_id)
+        with self.Session() as db:
+            self.assertEqual(db.query(MockTestRecord).count(), 1)
 
         detail = self.client.get(f"/api/mock-tests/{mock_test_id}")
         self.assertEqual(detail.status_code, 200)
@@ -310,86 +330,51 @@ class SpeakingApiTests(unittest.TestCase):
             self.assertEqual(db.query(AudioAsset).count(), 0)
             self.assertEqual(db.query(MockTestRecord).count(), 0)
 
-    def test_batch_full_mock_rejects_missing_audio_without_creating_assets(self):
-        metadata = {
-            "questions": [
-                {
-                    "index": index,
-                    "question_id": f"missing-{index}",
-                    "question": item,
-                    "duration": 1,
-                    "mime_type": "audio/wav",
-                }
-                for index, item in enumerate(questions())
-            ]
-        }
+    def test_full_mock_rerecord_replaces_old_pending_audio(self):
+        first = self.score_mock_answer(questions()[0])
+        self.assertEqual(first.status_code, 200, first.text)
+        old_id = first.json()["audio_asset_id"]
+        second = self.score_mock_answer(questions()[0], old_audio_asset_id=old_id)
+        self.assertEqual(second.status_code, 200, second.text)
+        with self.Session() as db:
+            self.assertIsNone(db.get(AudioAsset, old_id))
+            self.assertIsNotNone(db.get(AudioAsset, second.json()["audio_asset_id"]))
+
+    def test_full_mock_rejects_question_identity_mismatch(self):
+        item = questions()[0]
+        wav_audio = pcm_to_wav(b"\x00\x00" * 16000, sample_rate=16000)
         response = self.client.post(
-            "/api/speaking/mock-test/submit",
-            data={"metadata": json.dumps(metadata)},
-            files={"audio_0": ("answer.wav", pcm_to_wav(b"\x00\x00" * 16000), "audio/wav")},
+            "/api/speaking/mock-test/answer",
+            data={
+                "test_id": "session-1",
+                "question_id": "mock-session-1-part1-2",
+                "question_payload": json.dumps(item),
+                "duration": "1",
+                "mime_type": "audio/wav",
+            },
+            files={"audio": ("answer.wav", wav_audio, "audio/wav")},
         )
         self.assertEqual(response.status_code, 400)
         with self.Session() as db:
             self.assertEqual(db.query(AudioAsset).count(), 0)
 
-    def test_batch_full_mock_asr_failure_identifies_question_and_cleans_pending_audio(self):
+    def test_full_mock_asr_failure_cleans_new_audio(self):
         app.dependency_overrides[get_asr_provider] = lambda: FailingASRProvider()
-        metadata = {
-            "questions": [
-                {
-                    "index": index,
-                    "question_id": f"asr-failure-{index}",
-                    "question": item,
-                    "duration": 1,
-                    "mime_type": "audio/wav",
-                }
-                for index, item in enumerate(questions())
-            ]
-        }
-        wav_audio = pcm_to_wav(b"\x00\x00" * 16000, sample_rate=16000)
-        response = self.client.post(
-            "/api/speaking/mock-test/submit",
-            data={"metadata": json.dumps(metadata)},
-            files=[
-                (f"audio_{index}", (f"answer-{index}.wav", wav_audio, "audio/wav"))
-                for index in range(len(questions()))
-            ],
-        )
+        response = self.score_mock_answer(questions()[0])
         self.assertEqual(response.status_code, 503)
-        self.assertIn("Part 1 Question 1", response.json()["detail"])
         with self.Session() as db:
             self.assertEqual(db.query(AudioAsset).count(), 0)
             self.assertEqual(db.query(MockTestRecord).count(), 0)
         self.assertEqual(list(Path(self.temp.name).iterdir()), [])
 
-    def test_batch_full_mock_pronunciation_failure_degrades_without_failing_test(self):
+    def test_full_mock_pronunciation_failure_degrades_without_failing_answer(self):
         app.dependency_overrides[get_pronunciation_provider] = lambda: DisabledPronunciationProvider("Azure unavailable.")
-        metadata = {
-            "questions": [
-                {
-                    "index": index,
-                    "question_id": f"pronunciation-unavailable-{index}",
-                    "question": item,
-                    "duration": 1,
-                    "mime_type": "audio/wav",
-                }
-                for index, item in enumerate(questions())
-            ]
-        }
-        wav_audio = pcm_to_wav(b"\x00\x00" * 16000, sample_rate=16000)
-        response = self.client.post(
-            "/api/speaking/mock-test/submit",
-            data={"metadata": json.dumps(metadata)},
-            files=[
-                (f"audio_{index}", (f"answer-{index}.wav", wav_audio, "audio/wav"))
-                for index in range(len(questions()))
-            ],
-        )
+        response = self.score_mock_answer(questions()[0])
         self.assertEqual(response.status_code, 200, response.text)
-        body = response.json()
-        self.assertIsNone(body["report"]["criteria_scores"]["pronunciation"])
-        self.assertTrue(all(answer["voice_score"]["pronunciation"] is None for answer in body["answers"]))
-        self.assertTrue(all(answer["voice_score"]["pronunciation_assessment"]["provider"] == "none" for answer in body["answers"]))
+        answer = response.json()
+        self.assertIsNone(answer["voice_score"]["pronunciation"])
+        self.assertEqual(answer["voice_score"]["pronunciation_assessment"]["provider"], "none")
+        self.assertEqual(answer["voice_score"]["overall"], 6.5)
 
 
 if __name__ == "__main__":

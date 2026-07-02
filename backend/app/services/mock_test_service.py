@@ -30,6 +30,8 @@ class MockTestService:
         answers: list[MockAnswer],
         report: MockTestReport,
         audio_asset_ids: list[str],
+        *,
+        submission_key: str | None = None,
     ) -> MockTestRecord:
         unique_ids = list(dict.fromkeys(audio_asset_ids))
         assets = self.db.query(AudioAsset).filter(AudioAsset.id.in_(unique_ids)).all() if unique_ids else []
@@ -40,6 +42,7 @@ class MockTestService:
             answers_json=json.dumps([answer.model_dump() for answer in answers], ensure_ascii=False),
             report_json=json.dumps(report.model_dump(), ensure_ascii=False),
             overall_band=report.overall_band_score,
+            submission_key=submission_key,
         )
         try:
             self.db.add(record)
@@ -54,6 +57,10 @@ class MockTestService:
         except Exception:
             self.db.rollback()
             raise
+
+    def get_record_by_submission_key(self, submission_key: str) -> MockTestDetail | None:
+        record = self.db.query(MockTestRecord).filter(MockTestRecord.submission_key == submission_key).one_or_none()
+        return self.get_record(record.id) if record is not None else None
 
     def list_records(self) -> list[MockTestSummary]:
         records = self.db.query(MockTestRecord).order_by(desc(MockTestRecord.created_at)).all()

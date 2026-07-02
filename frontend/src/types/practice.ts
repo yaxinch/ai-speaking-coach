@@ -251,17 +251,6 @@ export interface MockTestReport {
   next_practice_focus: string[];
 }
 
-export interface SubmitFullMockTestPayload {
-  testId?: string;
-  questions: Array<{
-    questionId: string;
-    question: MockQuestion;
-    audioBlob: Blob;
-    duration: number;
-    mimeType?: string;
-  }>;
-}
-
 export interface MockTestSummary {
   id: string;
   mode: "full_mock";

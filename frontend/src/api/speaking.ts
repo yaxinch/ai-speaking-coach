@@ -1,5 +1,5 @@
 import { apiBlobRequest, apiEmptyRequest, apiRequest } from "./client";
-import type { ExaminerQuestion, FeedbackResult, MockAnswer, MockTestReport, PartType, SubmitFullMockTestPayload, VoiceAnswerResult, VoiceAnswerValue } from "../types/practice";
+import type { ExaminerQuestion, FeedbackResult, MockAnswer, MockQuestion, MockTestReport, PartType, VoiceAnswerResult, VoiceAnswerValue } from "../types/practice";
 
 function extensionForMime(mimeType: string): string {
   return mimeType.includes("wav") ? "wav" : mimeType.includes("mp4") ? "m4a" : mimeType.includes("mpeg") ? "mp3" : mimeType.includes("ogg") ? "ogg" : "webm";
@@ -39,28 +39,34 @@ export async function submitVoiceAnswer(payload: {
   return apiRequest<VoiceAnswerResult>("/api/speaking/voice-answer", { method: "POST", body: form });
 }
 
-export async function submitFullMockTest(
-  payload: SubmitFullMockTestPayload
-): Promise<{ mock_test_id: string; answers: MockAnswer[]; report: MockTestReport }> {
+export async function scoreFullMockAnswer(payload: {
+  testId: string;
+  questionId: string;
+  question: MockQuestion;
+  recording: VoiceAnswerValue;
+  oldAudioAssetId?: string;
+}): Promise<MockAnswer> {
+  if (!payload.recording.audioBlob) throw new Error("Please record your answer first.");
+  const mimeType = payload.recording.mimeType || payload.recording.audioBlob.type || "audio/webm";
   const form = new FormData();
-  form.append("metadata", JSON.stringify({
-    test_id: payload.testId,
-    questions: payload.questions.map((item, index) => ({
-      index,
-      question_id: item.questionId,
-      question: item.question,
-      duration: item.duration,
-      mime_type: item.mimeType || item.audioBlob.type || "audio/webm"
-    }))
-  }));
-  payload.questions.forEach((item, index) => {
-    const mimeType = item.mimeType || item.audioBlob.type || "audio/webm";
-    form.append(
-      `audio_${index}`,
-      new File([item.audioBlob], `${item.questionId}.${extensionForMime(mimeType)}`, { type: mimeType })
-    );
+  form.append("audio", new File([payload.recording.audioBlob], `${payload.questionId}.${extensionForMime(mimeType)}`, { type: mimeType }));
+  form.append("test_id", payload.testId);
+  form.append("question_id", payload.questionId);
+  form.append("question_payload", JSON.stringify(payload.question));
+  form.append("duration", String(payload.recording.duration ?? 0));
+  form.append("mime_type", mimeType);
+  if (payload.oldAudioAssetId) form.append("old_audio_asset_id", payload.oldAudioAssetId);
+  return apiRequest<MockAnswer>("/api/speaking/mock-test/answer", { method: "POST", body: form });
+}
+
+export function finalizeFullMockTest(
+  testId: string,
+  answers: MockAnswer[]
+): Promise<{ mock_test_id: string; answers: MockAnswer[]; report: MockTestReport }> {
+  return apiRequest("/api/speaking/mock-test/finalize", {
+    method: "POST",
+    body: JSON.stringify({ test_id: testId, answers })
   });
-  return apiRequest("/api/speaking/mock-test/submit", { method: "POST", body: form });
 }
 
 export function deletePendingAudio(audioAssetId: string): Promise<void> {

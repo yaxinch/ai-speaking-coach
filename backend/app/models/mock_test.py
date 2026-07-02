@@ -15,4 +15,5 @@ class MockTestRecord(Base):
     answers_json: Mapped[str] = mapped_column(Text)
     report_json: Mapped[str] = mapped_column(Text)
     overall_band: Mapped[float | None] = mapped_column(Float, nullable=True)
+    submission_key: Mapped[str | None] = mapped_column(String(120), nullable=True, unique=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)

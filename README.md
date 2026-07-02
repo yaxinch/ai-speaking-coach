@@ -12,7 +12,7 @@ AI Speaking Coach 是一个面向 IELTS Speaking 的 AI 语音练习与评分 We
 
 ## 核心产品能力
 
-- **Full Mock**：按 6/1/4 组成 11 题完整练习，结束后一次提交全部录音并生成整场报告。
+- **Full Mock**：按 6/1/4 组成 11 题完整练习，每题录音后独立转写与评分，结束时由后端本地聚合整场报告；Overview 只展示总分、四项分数与 Azure 平均发音分，详细反馈按 Part 和题目查看。
 - **Targeted Practice**：按 Part 1、Part 2、Part 3 进行单题专项练习。
 - **题库检索与组卷**：支持随机抽题和基于 practice goal 的 embedding 检索；LLM 只能从候选 ID 中选择，不能改写题目。
 - **语音交互**：TTS 播放考官题目，浏览器录制回答，后端统一转换音频格式。
@@ -110,7 +110,7 @@ AZURE_PRONUNCIATION_TIMEOUT_SECONDS=330
 - ASR Provider 将录音转为 transcript，支持 Gemini ASR 与 Mock ASR
 - Gemini ASR 对临时 429/503 使用有限指数退避重试，降低 Full Mock 因单题 Provider 波动而整场失败的概率
 - DeepSeek 提供流利度、词汇、语法、纠错、优化答案及下一步建议
-- DeepSeek 整场评分使用更长的读取超时，并对网络异常及 429/5xx 使用有限指数退避重试
+- DeepSeek 单题评分对网络异常及 429/5xx 使用有限指数退避重试；Full Mock 不再发起整场长报告请求
 - Azure Pronunciation Assessment 基于原始音频提供 PronScore、Accuracy、Fluency、Prosody 和低分单词
 - 使用 SQLite 与本地音频目录持久化练习记录和录音
 - 支持历史列表和练习详情查看
@@ -170,7 +170,8 @@ flowchart LR
 4. 后端将音频统一转换为 16 kHz、16-bit、单声道 PCM WAV。
 5. ASR Provider 返回 transcript，DeepSeek 对文本进行结构化评分；Pronunciation Provider 独立评估原始语音表现。
 6. 后端保存录音、transcript、文本反馈和发音诊断；Azure 不可用时只将发音维度降级为 N/A。
-7. 新版 Full Mock 从审核题库组成 6/1/4 共 11 题；考试中只在浏览器保存每题录音，Finish Test 后通过一次 multipart 请求统一转写、发音评估和整场评分。旧 4/1/3 接口继续兼容。
+7. 新版 Full Mock 从审核题库组成 6/1/4 共 11 题；每次 Next 都先完成当前题的转写、发音评估和文本评分，Finish Test 只执行确定性本地聚合与归档，不再发起整场 LLM 请求。旧 4/1/3 数据结构继续兼容。
+8. Full Mock 结果页的 Overview 只保留分数；Part 页签保留 Part summary、band 和逐题详情，Strengths/Weaknesses 只在各题 Analysis 内展示，避免重复汇总。
 
 ## 项目结构
 
@@ -288,7 +289,8 @@ Vite 开发服务器会将前端的 `/api` 请求代理到本地后端。
 | POST | `/api/feedback/evaluate` | 评估回答并保存记录 |
 | POST | `/api/speaking/tts` | 生成考官语音并返回 WAV |
 | POST | `/api/speaking/voice-answer` | 上传录音、转写并评分 |
-| POST | `/api/speaking/mock-test/submit` | 一次上传 Full Mock 全部录音并生成整场报告 |
+| POST | `/api/speaking/mock-test/answer` | 上传并评分一道 Full Mock 录音 |
+| POST | `/api/speaking/mock-test/finalize` | 本地聚合已评分答案并幂等归档 Full Mock |
 | GET | `/api/speaking/audio/{id}` | 播放持久化录音 |
 | DELETE | `/api/speaking/audio/{id}` | 删除未关联的重录音频 |
 | POST | `/api/mock-tests/generate` | 生成 4/1/3 Full Mock |

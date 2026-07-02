@@ -104,15 +104,6 @@ function PartReport({ partType, feedback, answers }: { partType: PartType; feedb
         <BandBlock label="Band estimate" value={feedback.band_estimate} />
       </Stack>
 
-      <Box sx={{ borderTop: 1, borderColor: "divider" }}>
-        <SplitLists
-          leftTitle="Strengths"
-          leftItems={feedback.strengths}
-          rightTitle="Weaknesses"
-          rightItems={feedback.weaknesses}
-        />
-      </Box>
-
       {partAnswers.map((answer) => {
         const analysis = feedback.question_analyses.find((item) => item.question_index === answer.question_index);
         return (
@@ -225,7 +216,6 @@ export function MockTestReportView({ report, answers }: { report: MockTestReport
         <Box sx={{ borderTop: 1, borderBottom: 1, borderColor: "divider" }}>
           <Box sx={{ py: 3 }}>
             <BandBlock label="Overall band estimate" value={report.overall_band_score} />
-            {report.overall_feedback ? <Typography sx={{ mt: 2, maxWidth: 850, lineHeight: 1.65 }}>{report.overall_feedback}</Typography> : null}
             <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2, 1fr)", md: "repeat(4, 1fr)" }, gap: 1.5, mt: 2.5 }}>
               {[
                 ["Fluency & Coherence", report.criteria_scores.fluency_coherence],
@@ -244,28 +234,6 @@ export function MockTestReportView({ report, answers }: { report: MockTestReport
                 Average Azure pronunciation score: {averageAzureScore.toFixed(1)}/100
               </Typography>
             ) : null}
-          </Box>
-          <Box sx={{ borderTop: 1, borderColor: "divider" }}>
-            <SplitLists
-              leftTitle="Key Strengths"
-              leftItems={report.key_strengths}
-              rightTitle="Key Weaknesses"
-              rightItems={report.key_weaknesses}
-            />
-          </Box>
-          <Box sx={{ py: 3, borderTop: 1, borderColor: "divider" }}>
-            <Typography variant="h3" sx={{ mb: 1.25 }}>Next Practice Focus</Typography>
-            <ItemList items={report.next_practice_focus.length ? report.next_practice_focus : report.action_plan} />
-          </Box>
-          {report.repeated_errors.length ? (
-            <Box sx={{ py: 3, borderTop: 1, borderColor: "divider" }}>
-              <Typography variant="h3" sx={{ mb: 1.25 }}>Repeated Errors</Typography>
-              <ItemList items={report.repeated_errors.map((item) => `${item.error_type}: ${item.examples.join("; ")} — ${item.suggestion}`)} />
-            </Box>
-          ) : null}
-          <Box sx={{ py: 3, borderTop: 1, borderColor: "divider" }}>
-            <Typography variant="h3" sx={{ mb: 1.25 }}>Part Performance</Typography>
-            <ItemList items={partTabs.map((item) => `${item.label}: ${report.part_performance[item.value] || feedbackByPart[item.value].summary}`)} />
           </Box>
         </Box>
       ) : (

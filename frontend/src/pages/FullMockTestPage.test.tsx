@@ -7,7 +7,8 @@ import { FullMockTestPage } from "./FullMockTestPage";
 
 const api = vi.hoisted(() => ({
   startMockTest: vi.fn(),
-  submitFullMockTest: vi.fn()
+  scoreFullMockAnswer: vi.fn(),
+  finalizeFullMockTest: vi.fn()
 }));
 
 vi.mock("../api/mockTests", () => ({
@@ -15,7 +16,8 @@ vi.mock("../api/mockTests", () => ({
 }));
 
 vi.mock("../api/speaking", () => ({
-  submitFullMockTest: api.submitFullMockTest
+  scoreFullMockAnswer: api.scoreFullMockAnswer,
+  finalizeFullMockTest: api.finalizeFullMockTest
 }));
 
 vi.mock("../hooks/useExaminerVoice", () => ({
@@ -128,7 +130,10 @@ function scoredAnswer(question: MockQuestion, sequence: number): MockAnswer {
 describe("FullMockTestPage", () => {
   beforeEach(() => {
     api.startMockTest.mockReset().mockResolvedValue(session);
-    api.submitFullMockTest.mockReset().mockResolvedValue({
+    api.scoreFullMockAnswer.mockReset().mockImplementation(({ question }: { question: MockQuestion }) => (
+      Promise.resolve(scoredAnswer(question, api.scoreFullMockAnswer.mock.calls.length))
+    ));
+    api.finalizeFullMockTest.mockReset().mockResolvedValue({
       mock_test_id: "mock-1",
       answers: questions.map((item, index) => scoredAnswer(item, index + 1)),
       report
@@ -158,7 +163,7 @@ describe("FullMockTestPage", () => {
     await user.click(screen.getByRole("button", { name: "Record answer" }));
     await user.click(screen.getByRole("button", { name: "Next Question" }));
     expect(await screen.findByText("Part 1 2/6")).toBeInTheDocument();
-    expect(api.submitFullMockTest).not.toHaveBeenCalled();
+    expect(api.scoreFullMockAnswer).toHaveBeenCalledTimes(1);
     await user.click(screen.getByRole("button", { name: "Record answer" }));
     await user.click(screen.getByRole("button", { name: "Next Question" }));
     expect(await screen.findByText("Part 1 3/6")).toBeInTheDocument();
@@ -166,10 +171,10 @@ describe("FullMockTestPage", () => {
     await user.click(screen.getByRole("button", { name: "Previous" }));
     expect(await screen.findByText("Part 1 2/6")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Recorded answer" })).toBeInTheDocument();
-    expect(screen.getByText("Recorded")).toBeInTheDocument();
+    expect(screen.getByText("Answer processed")).toBeInTheDocument();
   });
 
-  it("submits all eleven recordings once after Finish Test", async () => {
+  it("scores all eleven recordings individually and finalizes without audio blobs", async () => {
     const user = userEvent.setup();
     const onResult = vi.fn();
     render(<FullMockTestPage onResult={onResult} />);
@@ -186,8 +191,26 @@ describe("FullMockTestPage", () => {
       }
     }
 
-    await waitFor(() => expect(api.submitFullMockTest).toHaveBeenCalledOnce());
-    expect(api.submitFullMockTest.mock.calls[0][0].questions).toHaveLength(11);
+    await waitFor(() => expect(api.finalizeFullMockTest).toHaveBeenCalledOnce());
+    expect(api.scoreFullMockAnswer).toHaveBeenCalledTimes(11);
+    expect(api.finalizeFullMockTest.mock.calls[0][0]).toBe("session-id");
+    expect(api.finalizeFullMockTest.mock.calls[0][1]).toHaveLength(11);
+    expect(api.finalizeFullMockTest.mock.calls[0][1][0].audioBlob).toBeUndefined();
     expect(onResult).toHaveBeenCalledWith(expect.objectContaining({ mockTestId: "mock-1", report }));
+  });
+
+  it("keeps the current recording and retries after a scoring failure", async () => {
+    api.scoreFullMockAnswer.mockRejectedValueOnce(new Error("Scoring unavailable"));
+    const user = userEvent.setup();
+    render(<FullMockTestPage onResult={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: "Start Practice" }));
+    await user.click(await screen.findByRole("button", { name: "Record answer" }));
+    await user.click(screen.getByRole("button", { name: "Next Question" }));
+
+    expect(await screen.findByText("Scoring unavailable")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Recorded answer" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Next Question" }));
+    expect(await screen.findByText("Part 1 2/6")).toBeInTheDocument();
+    expect(api.scoreFullMockAnswer).toHaveBeenCalledTimes(2);
   });
 });
