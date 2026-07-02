@@ -106,6 +106,7 @@ AZURE_PRONUNCIATION_TIMEOUT_SECONDS=330
 - ASR Provider 将录音转为 transcript，支持 Gemini ASR 与 Mock ASR
 - Gemini ASR 对临时 429/503 使用有限指数退避重试，降低 Full Mock 因单题 Provider 波动而整场失败的概率
 - DeepSeek 提供流利度、词汇、语法、纠错、优化答案及下一步建议
+- DeepSeek 整场评分使用更长的读取超时，并对网络异常及 429/5xx 使用有限指数退避重试
 - Azure Pronunciation Assessment 基于原始音频提供 PronScore、Accuracy、Fluency、Prosody 和低分单词
 - 使用 SQLite 与本地音频目录持久化练习记录和录音
 - 支持历史列表和练习详情查看
