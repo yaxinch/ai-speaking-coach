@@ -104,6 +104,7 @@ AZURE_PRONUNCIATION_TIMEOUT_SECONDS=330
 - Gemini TTS Provider 生成考官语音，Mock TTS 支持无 Key 本地开发
 - 基于 `react-media-recorder` 录制用户回答，每道题最长可录制 3 分钟
 - ASR Provider 将录音转为 transcript，支持 Gemini ASR 与 Mock ASR
+- Gemini ASR 对临时 429/503 使用有限指数退避重试，降低 Full Mock 因单题 Provider 波动而整场失败的概率
 - DeepSeek 提供流利度、词汇、语法、纠错、优化答案及下一步建议
 - Azure Pronunciation Assessment 基于原始音频提供 PronScore、Accuracy、Fluency、Prosody 和低分单词
 - 使用 SQLite 与本地音频目录持久化练习记录和录音
