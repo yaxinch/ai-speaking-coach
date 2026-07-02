@@ -4,7 +4,11 @@ AI Speaking Coach 是一个面向 IELTS Speaking 的 AI 语音练习与评分 We
 
 当前版本支持题库驱动的分项练习、11 题 Full Mock、考官语音、浏览器录音、ASR、发音评估、结构化评分和历史回放。线上版本采用单管理员私有演示模式，避免公开消耗项目所有者的 LLM 与 Speech API 配额。
 
-> 部署状态：代码已适配 Render 单域 Docker 部署；线上地址将在首次 Render 部署成功后补充。
+> 线上应用：[https://ai-speaking-coach.onrender.com](https://ai-speaking-coach.onrender.com)
+>
+> 健康检查：[https://ai-speaking-coach.onrender.com/api/health](https://ai-speaking-coach.onrender.com/api/health)
+>
+> 线上版本采用单管理员私有演示模式，无公开注册；使用应用功能需要管理员账号。
 
 ## 核心产品能力
 
@@ -40,7 +44,7 @@ API Key 和管理员 Secret 只允许存在于后端环境变量。不要使用 
 
    | 变量 | 用途 |
    | --- | --- |
-   | `CORS_ORIGINS` | Render 服务的完整 HTTPS 地址，例如 `https://ai-speaking-coach.onrender.com` |
+   | `CORS_ORIGINS` | 当前服务填写 `https://ai-speaking-coach.onrender.com`；自定义域名后同步更新为实际 HTTPS 地址 |
    | `ADMIN_USERNAME` | 私有演示管理员用户名 |
    | `ADMIN_PASSWORD_HASH` | `scripts/generate_password_hash.py` 生成的 bcrypt hash |
    | `DEEPSEEK_API_KEY` | 组卷选择与文本评分 |
@@ -207,6 +211,8 @@ ai-speaking-coach/
 - 可用的 DeepSeek API Key
 
 ## 本地运行
+
+本节中的 `127.0.0.1` 和 `localhost` 仅用于本地开发。直接使用线上版本请访问 [Render 线上应用](https://ai-speaking-coach.onrender.com)。
 
 ### 1. 启动后端
 
