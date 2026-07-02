@@ -13,6 +13,16 @@ Object.defineProperty(globalThis, "MediaRecorder", {
   value: class MediaRecorder {}
 });
 
+Object.defineProperty(globalThis, "Worker", {
+  configurable: true,
+  value: class Worker {
+    postMessage = vi.fn();
+    terminate = vi.fn();
+    addEventListener = vi.fn();
+    removeEventListener = vi.fn();
+  }
+});
+
 Object.defineProperty(navigator, "mediaDevices", {
   configurable: true,
   value: { getUserMedia: vi.fn() }

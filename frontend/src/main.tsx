@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { CssBaseline, ThemeProvider, useMediaQuery } from "@mui/material";
-import { App } from "./App";
+import { AuthGate } from "./AuthGate";
 import { createAppTheme, type ColorMode } from "./theme";
 import "./styles/index.css";
 
@@ -22,7 +22,7 @@ function Root() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <App colorMode={colorMode} onColorModeChange={handleColorModeChange} />
+      <AuthGate colorMode={colorMode} onColorModeChange={handleColorModeChange} />
     </ThemeProvider>
   );
 }

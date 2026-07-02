@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from tests.auth_test_support import login
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -100,6 +101,7 @@ class SpeakingApiTests(unittest.TestCase):
         app.dependency_overrides[get_pronunciation_provider] = lambda: MockPronunciationProvider()
         app.dependency_overrides[get_tts_provider] = lambda: MockTTSProvider()
         self.client = TestClient(app)
+        login(self.client)
         FakeScoringLLM.full_mock_calls = 0
 
     def tearDown(self):

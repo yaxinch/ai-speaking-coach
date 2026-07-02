@@ -1,5 +1,51 @@
 # AI Speaking Coach
 
+## Private demo login and deployment security
+
+This repository is an AI Speaking Coach portfolio demo. Features that read practice history or call LLM, ASR, TTS, embedding, and Azure Pronunciation Assessment services require the single administrator account. There is no public registration and no JWT: authentication uses an 8-hour signed session in an HttpOnly cookie.
+
+### Local setup
+
+1. Install backend dependencies and copy the environment template:
+
+   ```powershell
+   cd backend
+   python -m venv .venv
+   .venv\Scripts\python.exe -m pip install -r requirements.txt
+   Copy-Item .env.example .env
+   ```
+
+2. Generate the administrator password hash. The script hides and confirms the password, then prints only the bcrypt hash:
+
+   ```powershell
+   .venv\Scripts\python.exe scripts\generate_password_hash.py
+   ```
+
+3. Put the generated value in `ADMIN_PASSWORD_HASH`, choose `ADMIN_USERNAME`, and generate a random `SESSION_SECRET_KEY` containing at least 32 characters. Keep `APP_ENV=development` locally. Add provider keys only for the providers you enable.
+
+4. Start the backend from `backend` and the frontend from `frontend`:
+
+   ```powershell
+   # backend
+   .venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8010
+
+   # frontend
+   npm install
+   npm run dev
+   ```
+
+Vite proxies `/api` to the local FastAPI server, so browser requests remain same-origin. Every frontend API wrapper sends `credentials: "include"`.
+
+### Production deployment
+
+Use one HTTPS origin and reverse-proxy `/api` to FastAPI. Set `APP_ENV=production`, an explicit HTTPS `CORS_ORIGINS`, a bcrypt `ADMIN_PASSWORD_HASH`, and a strong `SESSION_SECRET_KEY`. Production startup rejects missing or unsafe authentication settings. Production cookies are HttpOnly, Secure, SameSite=Lax, and expire after eight hours.
+
+If the frontend and API must be deployed cross-site, the implementation must be deliberately changed to `SameSite=None` with `Secure`, FastAPI must use an explicit frontend origin with `allow_credentials=True`, and the frontend must continue sending credentials. Wildcard CORS origins are not compatible with credentialed requests.
+
+API keys and administrator secrets belong only in backend environment variables. Never use `VITE_API_KEY`, `REACT_APP_API_KEY`, `NEXT_PUBLIC_API_KEY`, or any other browser-exposed variable for private credentials. `.env` variants are ignored by Git; only sanitized `.env.example` files may be committed. Before publishing, scan tracked files and Git history for secrets and rotate any key that has ever been committed.
+
+Public endpoints are limited to `/api/health` and `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`. All examiner, feedback, practice, mock-test, speech, history, and recording endpoints require a valid session.
+
 ## Azure Pronunciation Assessment（2026-06-30）
 
 语音答案现在可在保留 Gemini ASR 和 DeepSeek 评分的同时，使用 Azure Speech 对原始录音进行发音评估。Azure 返回 0–100 原始分，页面同时显示明确标注为 estimated 的 IELTS 0–9 启发式分数；该分数不参与现有 Overall 计算。Azure 不可用时会降级为 N/A，不阻断转写和其他评分。

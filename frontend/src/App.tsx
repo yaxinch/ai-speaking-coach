@@ -4,6 +4,7 @@ import AssignmentTurnedInOutlinedIcon from "@mui/icons-material/AssignmentTurned
 import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import LightModeOutlinedIcon from "@mui/icons-material/LightModeOutlined";
+import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import MessageOutlinedIcon from "@mui/icons-material/MessageOutlined";
 import SettingsBrightnessOutlinedIcon from "@mui/icons-material/SettingsBrightnessOutlined";
@@ -70,10 +71,14 @@ const colorModeOptions = [
 
 export function App({
   colorMode,
-  onColorModeChange
+  onColorModeChange,
+  username,
+  onLogout
 }: {
   colorMode: ColorMode;
   onColorModeChange: (mode: ColorMode) => void;
+  username: string;
+  onLogout: () => Promise<void>;
 }) {
   const [route, setRoute] = useState<Route>({ name: "home" });
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -276,8 +281,8 @@ export function App({
             open={Boolean(themeAnchor)}
             anchorEl={themeAnchor}
             onClose={() => setThemeAnchor(null)}
-            anchorOrigin={{ vertical: "top", horizontal: "center" }}
-            transformOrigin={{ vertical: "bottom", horizontal: "center" }}
+            anchorOrigin={{ vertical: "top", horizontal: "left" }}
+            transformOrigin={{ vertical: "bottom", horizontal: "left" }}
           >
             <MenuList dense sx={{ minWidth: 180, p: 0.75 }}>
               {colorModeOptions.map((option) => {
@@ -299,6 +304,14 @@ export function App({
               })}
             </MenuList>
           </Popover>
+          <Tooltip title={sidebarCollapsed ? `Sign out ${username}` : ""} placement="right">
+            <ListItemButton aria-label="Sign out" onClick={() => void onLogout()} sx={sidebarButtonSx}>
+              <ListItemIcon sx={{ color: "#ffffff", minWidth: sidebarCollapsed ? 0 : 34, justifyContent: "center" }}>
+                <LogoutOutlinedIcon fontSize="small" />
+              </ListItemIcon>
+              {!sidebarCollapsed ? <ListItemText primary={`Sign out (${username})`} /> : null}
+            </ListItemButton>
+          </Tooltip>
         </Box>
       </Box>
 
