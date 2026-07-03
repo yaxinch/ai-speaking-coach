@@ -53,7 +53,9 @@ export function FullMockTestPage({
   const currentKey = current ? keyFor(current) : "";
   const currentAnswer = answers[currentKey] ?? { status: "empty" as const };
   const currentVoiceState = current ? examinerVoice.voices[questionIdFor(current)] : undefined;
-  const completed = sortedQuestions.filter((question) => answers[keyFor(question)]?.status === "scored").length;
+  const recordedCount = sortedQuestions.filter(
+    (question) => Boolean(answers[keyFor(question)]?.recording?.audioBlob)
+  ).length;
 
   useEffect(() => () => {
     examinerVoice.stop();
@@ -290,7 +292,7 @@ export function FullMockTestPage({
           </Button>
         ) : (
           <Button variant="contained" disabled={submitting} onClick={handleFinish}>
-            {submitting ? "Processing your answer..." : `Finish Test (${completed}/${sortedQuestions.length})`}
+            {submitting ? "Processing your answer..." : `Finish Test (${recordedCount}/${sortedQuestions.length})`}
           </Button>
         )}
       </Stack>

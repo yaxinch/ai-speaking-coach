@@ -187,7 +187,9 @@ describe("FullMockTestPage", () => {
         await user.click(screen.getByRole("button", { name: "Next Question" }));
         await screen.findByText(`${index + 2} of 11`);
       } else {
-        await user.click(screen.getByRole("button", { name: /Finish Test/ }));
+        const finishButton = screen.getByRole("button", { name: "Finish Test (11/11)" });
+        expect(finishButton).toBeEnabled();
+        await user.click(finishButton);
       }
     }
 
