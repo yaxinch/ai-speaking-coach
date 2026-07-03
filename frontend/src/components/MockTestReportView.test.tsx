@@ -1,7 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import type { MockTestReport, PartFeedback } from "../types/practice";
+import type { MockAnswer, MockTestReport, PartFeedback } from "../types/practice";
 import { MockTestReportView } from "./MockTestReportView";
 
 const emptyPart: PartFeedback = {
@@ -32,6 +32,23 @@ const report: MockTestReport = {
   part3_feedback: emptyPart
 };
 
+const answer: MockAnswer = {
+  part_type: "part1",
+  question_index: 1,
+  question: { part_type: "part1", question_index: 1, question: "Do you work or study?", cue_card: null },
+  answer_text: "I work as a developer.",
+  transcript_text: "I work as a developer.",
+  audio_url: null,
+  voice_score: {
+    overall: 6.5,
+    fluency_coherence: 6,
+    lexical_resource: 6.5,
+    grammatical_range_accuracy: 6.5,
+    pronunciation: 7
+  },
+  voice_feedback: null
+};
+
 describe("MockTestReportView", () => {
   it("keeps the overview score-only", () => {
     render(<MockTestReportView report={report} answers={[]} />);
@@ -46,16 +63,21 @@ describe("MockTestReportView", () => {
     expect(screen.queryByText("Part Performance")).not.toBeInTheDocument();
   });
 
-  it("does not repeat part-level strengths and weaknesses", async () => {
+  it("shows only the part band before the question results", async () => {
     const user = userEvent.setup();
-    render(<MockTestReportView report={report} answers={[]} />);
+    render(<MockTestReportView report={report} answers={[answer]} />);
 
     await user.click(screen.getByRole("tab", { name: "Part 1" }));
-    expect(screen.getByText("Part 1 Feedback")).toBeInTheDocument();
-    expect(screen.getByText("Part summary that belongs on the part tab.")).toBeInTheDocument();
+    expect(screen.getByText("Band estimate")).toBeInTheDocument();
+    expect(screen.queryByText("Part 1 Feedback")).not.toBeInTheDocument();
+    expect(screen.queryByText("Part summary that belongs on the part tab.")).not.toBeInTheDocument();
     expect(screen.queryByText("Strengths")).not.toBeInTheDocument();
     expect(screen.queryByText("Weaknesses")).not.toBeInTheDocument();
     expect(screen.queryByText("Part strength")).not.toBeInTheDocument();
     expect(screen.queryByText("Part weakness")).not.toBeInTheDocument();
+    expect(screen.queryByText("Band N/A")).not.toBeInTheDocument();
+    const overallCard = screen.getByTestId("overall-score-card");
+    expect(overallCard).toHaveAttribute("data-score-variant", "primary");
+    expect(within(overallCard).getByText("6.5")).toBeInTheDocument();
   });
 });

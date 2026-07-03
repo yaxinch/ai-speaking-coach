@@ -92,28 +92,17 @@ function PartReport({ partType, feedback, answers }: { partType: PartType; feedb
 
   return (
     <Box sx={{ borderTop: 1, borderBottom: 1, borderColor: "divider" }}>
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        spacing={2.5}
-        sx={{ py: 3, justifyContent: "space-between", alignItems: { xs: "stretch", sm: "flex-start" } }}
-      >
-        <Box sx={{ maxWidth: 780 }}>
-          <Typography variant="h2">{partTabs.find((item) => item.value === partType)?.label} Feedback</Typography>
-          <Typography color="text.secondary" sx={{ mt: 1.25, lineHeight: 1.65 }}>{feedback.summary}</Typography>
-        </Box>
+      <Box sx={{ py: 3 }}>
         <BandBlock label="Band estimate" value={feedback.band_estimate} />
-      </Stack>
+      </Box>
 
       {partAnswers.map((answer) => {
         const analysis = feedback.question_analyses.find((item) => item.question_index === answer.question_index);
         return (
           <Box key={`${partType}-${answer.question_index}`} sx={{ borderTop: 1, borderColor: "divider" }}>
-            <Stack direction="row" sx={{ py: 2.5, justifyContent: "space-between", alignItems: "center" }}>
+            <Box sx={{ py: 2.5 }}>
               <Typography variant="h3">Question {answer.question_index}</Typography>
-              <Typography color="primary.dark" sx={{ fontSize: 18, fontWeight: 800 }}>
-                Band {score(analysis?.band_estimate ?? null)}
-              </Typography>
-            </Stack>
+            </Box>
             <Box sx={{ borderTop: 1, borderColor: "divider" }}>
               <QuestionCard question={answer.question} plain />
             </Box>
@@ -139,12 +128,25 @@ function PartReport({ partType, feedback, answers }: { partType: PartType; feedb
                     ["Vocabulary", answer.voice_score.lexical_resource],
                     ["Grammar", answer.voice_score.grammatical_range_accuracy],
                     ["Pronunciation (estimated)", answer.voice_score.pronunciation]
-                  ].map(([label, value]) => (
-                    <Box key={String(label)} sx={{ p: 1.5, bgcolor: "action.hover", borderRadius: 1.5 }}>
-                      <Typography color="text.secondary" sx={{ fontSize: 12 }}>{label}</Typography>
-                      <Typography sx={{ mt: 0.5, fontSize: 22, fontWeight: 800 }}>{typeof value === "number" ? value.toFixed(1) : "N/A"}</Typography>
-                    </Box>
-                  ))}
+                  ].map(([label, value]) => {
+                    const isOverall = label === "Overall";
+                    return (
+                      <Box
+                        key={String(label)}
+                        data-testid={isOverall ? "overall-score-card" : undefined}
+                        data-score-variant={isOverall ? "primary" : "neutral"}
+                        sx={{
+                          p: 1.5,
+                          bgcolor: isOverall ? "primary.main" : "action.hover",
+                          color: isOverall ? "primary.contrastText" : "text.primary",
+                          borderRadius: 1.5
+                        }}
+                      >
+                        <Typography color={isOverall ? "inherit" : "text.secondary"} sx={{ fontSize: 12 }}>{label}</Typography>
+                        <Typography sx={{ mt: 0.5, fontSize: 22, fontWeight: 800 }}>{typeof value === "number" ? value.toFixed(1) : "N/A"}</Typography>
+                      </Box>
+                    );
+                  })}
                 </Box>
                 <PronunciationAssessmentView assessment={answer.voice_score.pronunciation_assessment} />
                 {answer.voice_feedback?.summary ? <Typography sx={{ mt: 2, lineHeight: 1.65 }}>{answer.voice_feedback.summary}</Typography> : null}

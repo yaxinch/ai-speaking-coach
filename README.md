@@ -171,7 +171,7 @@ flowchart LR
 5. ASR Provider 返回 transcript，DeepSeek 对文本进行结构化评分；Pronunciation Provider 独立评估原始语音表现。
 6. 后端保存录音、transcript、文本反馈和发音诊断；Azure 不可用时只将发音维度降级为 N/A。
 7. 新版 Full Mock 从审核题库组成 6/1/4 共 11 题；每次 Next 都先完成当前题的转写、发音评估和文本评分，Finish Test 只执行确定性本地聚合与归档，不再发起整场 LLM 请求。旧 4/1/3 数据结构继续兼容。
-8. Full Mock 结果页的 Overview 只保留分数；Part 页签保留 Part summary、band 和逐题详情，Strengths/Weaknesses 只在各题 Analysis 内展示，避免重复汇总。
+8. Full Mock 结果页的 Overview 只保留分数；Part 页签顶部仅保留左对齐的 Part band，不再展示拼接的 Part feedback。逐题标题不重复展示 Overall band，Criteria Scores 使用蓝色 Overall 卡片，Strengths/Weaknesses 只在各题 Analysis 内展示。
 
 ## 项目结构
 
