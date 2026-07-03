@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from app.schemas.agent import CueCard, PartType
 from app.schemas.speaking import VoiceFeedback, VoiceScore
+from app.schemas.timestamps import UtcCreatedAtModel
 
 
 LEGACY_PART_COUNTS: dict[PartType, int] = {"part1": 4, "part2": 1, "part3": 3}
@@ -263,14 +264,14 @@ class FinalizeFullMockTestRequest(EvaluateMockTestRequest):
         return self
 
 
-class MockTestSummary(BaseModel):
+class MockTestSummary(UtcCreatedAtModel):
     id: str
     mode: str = "full_mock"
     overall_band: float | None
     created_at: datetime
 
 
-class MockTestDetail(BaseModel):
+class MockTestDetail(UtcCreatedAtModel):
     id: str
     mode: str = "full_mock"
     questions: list[MockQuestion]

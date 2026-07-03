@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from app.schemas.agent import ExaminerQuestion, FeedbackResult, PartType, QuestionDifficulty
+from app.schemas.timestamps import UtcCreatedAtModel
 
 
 class StartSectionPracticeRequest(BaseModel):
@@ -51,7 +52,7 @@ class StartSectionPracticeResponse(BaseModel):
     metadata: SectionPracticeMetadata
 
 
-class PracticeSummary(BaseModel):
+class PracticeSummary(UtcCreatedAtModel):
     id: str
     part_type: PartType
     question_text: str
@@ -59,7 +60,7 @@ class PracticeSummary(BaseModel):
     created_at: datetime
 
 
-class PracticeDetail(BaseModel):
+class PracticeDetail(UtcCreatedAtModel):
     id: str
     part_type: PartType
     question: ExaminerQuestion

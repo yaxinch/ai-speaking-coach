@@ -11,6 +11,11 @@ export function historyEntryKey(record: HistoryEntry): string {
   return `${record.mode}:${record.id}`;
 }
 
+export function parseHistoryTimestamp(value: string): Date {
+  const hasTimeZone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(value);
+  return new Date(hasTimeZone ? value : `${value}Z`);
+}
+
 export function HistoryList({
   records,
   onOpen,
@@ -65,7 +70,7 @@ export function HistoryList({
                 }}
               >
             <Typography color="text.secondary" sx={{ fontSize: 13 }}>
-              {new Date(record.created_at).toLocaleString()}
+              {parseHistoryTimestamp(record.created_at).toLocaleString()}
             </Typography>
             <Chip
               label={record.mode === "full_mock" ? "Full Mock Test" : "Targeted Practice"}

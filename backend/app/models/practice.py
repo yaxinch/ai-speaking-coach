@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from sqlalchemy import DateTime, Float, String, Text
@@ -20,4 +20,6 @@ class PracticeRecord(Base):
     audio_asset_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     feedback_json: Mapped[str] = mapped_column(Text)
     overall_band: Mapped[float | None] = mapped_column(Float, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
+    )
