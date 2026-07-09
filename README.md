@@ -320,10 +320,6 @@ npm test
 
 构建产物生成在 `frontend/dist`，该目录不会提交到 Git。
 
-## 产品截图
-
-截图清单与脱敏要求见 [`docs/screenshots/README.md`](docs/screenshots/README.md)。正式作品集建议至少展示登录、模式选择、Full Mock 录音流程、分项反馈和练习历史；不要包含真实凭据、API Key、个人录音或可识别信息。
-
 ## 数据与安全
 
 - `backend/.env` 包含 API Key，不应提交到版本库。
@@ -337,7 +333,7 @@ npm test
 
 ## IELTS Speaking practice question bank
 
-仓库包含 60 道项目自编的英文演示题：Part 1/2/3 分别为 30/10/20。它们用于让全新部署具备可验证的基础流程，不属于官方 IELTS 真题，也不代表真实考试预测。完整本地审核题库、采集缓存、数据库和 embeddings 不提交 GitHub。
+仓库包含 60 道英文演示题：Part 1/2/3 分别为 30/10/20。题目用于让全新部署具备可验证的基础流程，不代表真实考试预测。完整本地审核题库、采集缓存、数据库和 embeddings 不提交 GitHub。
 
 题库采集是独立的离线审核流水线，不会直接改变现有 Examiner Agent 或练习 API。配置文件和人工维护的 seed 可以提交 Git；HTML 缓存、raw、cleaned、review CSV 和 SQLite 数据均被忽略。
 
@@ -371,7 +367,7 @@ python -m app.question_bank.scripts.generate_embeddings --batch-size 50
 
 调用 `POST /api/practices/section/start`，例如请求体 `{"part":"part1","practiceGoal":"technology"}`。
 
-`sources/question_sources.json` 和 example 配置默认不启用来源。本地配置只用于小规模验证；启用前必须人工确认页面公开可访问、无需登录或付费、适合自动解析，并检查网站条款。运行时仍会读取 robots.txt；无法可靠确认许可、出现验证码、Cloudflare 挑战、登录、付费墙或非 HTML 内容时会停止该 URL，并要求改用人工 CSV/JSON 导入。IELTS.org PDF 第一版不自动解析。产品和文档只能称其为 IELTS Speaking practice question bank，不得宣称“官方真题库”。
+`sources/question_sources.json` 和 example 配置默认不启用来源。本地配置只用于小规模验证；启用前必须人工确认页面公开可访问、无需登录或付费、适合自动解析，并检查网站条款。运行时仍会读取 robots.txt；无法可靠确认许可、出现验证码、Cloudflare 挑战、登录、付费墙或非 HTML 内容时会停止该 URL，并要求改用人工 CSV/JSON 导入。产品和文档只能称其为 IELTS Speaking practice question bank，非“官方真题库”。
 
 ## 当前版本范围
 

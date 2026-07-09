@@ -6,6 +6,7 @@
 !.env.example
 !**/.env.example
 PROJECT_MEMORY.md
+/resume.md
 .agents/
 .venv/
 __pycache__/
